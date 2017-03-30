@@ -23,7 +23,7 @@
 #include <thread>
 #include <memory>
 //using namespace std;
-#define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
+#define debug(x) std::cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<< std::endl;
 #define flag(x) FLAGS_##x
 
 class Base {
@@ -40,6 +40,11 @@ class Base {
   ~Base() {
     std::cout << "Dtor in " << __FUNCTION__ << " @" << this << std::endl;
   }
+  void print() const {
+    debug(a_);
+  }
+ private:
+  int a_ = 10;
 };
 
 class Derived : public Base {
@@ -76,8 +81,3 @@ class Container {
   Base b_;
   Derived d_;
 };
-
-int main() {
-  Container con;
-  return 0;
-}
