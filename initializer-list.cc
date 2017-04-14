@@ -88,6 +88,11 @@ struct Simple {
 };
 
 int main() {
+  auto sp = Simple{
+    .a = 10,
+    .b = -1,
+    .c = "dfadsfa",
+  };
   FixedString<7> fixChar{"abcdefg"};
   FixedSizeVector<5, int> fixInt{1, 2, 3, 4, 5};
   fixInt.Print();
