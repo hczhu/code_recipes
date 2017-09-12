@@ -26,6 +26,9 @@
 #define debug(x) std::cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<< std::endl;
 #define flag(x) FLAGS_##x
 
+template <typename... T>
+class TypeDebug;
+
 class Base {
  public:
   Base() {
