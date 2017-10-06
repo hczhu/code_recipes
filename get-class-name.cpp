@@ -50,7 +50,7 @@ class ClassNameTrait {
         PEEK(name_);
      };
 
-    std::string getName() {
+    std::string getName() const {
       return getName_();
     }
     // virtual is important. If not used, the types are not polymorphic.
@@ -64,14 +64,20 @@ class MyClass : public ClassNameTrait {
   
 };
 
+template<typename T>
+class TClass : public ClassNameTrait {
+
+};
+
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   PEEK(MyClass().getName());
   MyClass my;
   const ClassNameTrait& cnt = my;
-  PEEK(folly::demangle(typeid(cnt)));
-  PEEK(folly::demangle(typeid(my)));
+  PEEK(cnt.getName());
+  PEEK(my.getName());
+  PEEK(TClass<int>().getName());
   return 0;
 }
 
