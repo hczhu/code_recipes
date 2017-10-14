@@ -9,27 +9,6 @@
 #include <cassert>
 using namespace std;
 
-struct FileAndLock {
-  explicit FileAndLock(const string& filename)
-      : fileLock(make_shared<mutex>()) {
-    ofstream tmp(filename, ofstream::out | ofstream::trunc);
-    tmp.close();
-    fileToAppend = shared_ptr<ofstream>(
-        new ofstream(filename, ofstream::out | ofstream::app),
-        [filename](ofstream* file) {
-          file->flush();
-          file->close();
-          delete file;
-          cout << "Closed file: " << filename << endl;
-    });
-    assert(fileToAppend->is_open());
-  }
-  FileAndLock(const FileAndLock& other) = default;
-  FileAndLock() = default;
-
-  shared_ptr<ofstream> fileToAppend;
-  shared_ptr<mutex> fileLock;
-};
 
 int main() {
   vector<thread> threads;
