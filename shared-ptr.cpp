@@ -1,31 +1,78 @@
-#include <fstream>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cmath>
+#include <complex>
+#include <condition_variable>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <iostream>
+#include <iterator>
+#include <limits>
+#include <limits.h>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
 #include <thread>
+#include <valarray>
 #include <vector>
-#include <map>
-#include <cassert>
-using namespace std;
 
+#include <glog/logging.h>
+#include <gflags/gflags.h>
+#include <gtest/gtest.h>
 
-int main() {
-  vector<thread> threads;
-  map<int, FileAndLock> fileMap;
-  fileMap.insert(make_pair(0, FileAndLock("/tmp/test-0.txt")));
-  fileMap.insert(make_pair(1, FileAndLock("/tmp/test-1.txt")));
-  fileMap.insert(make_pair(2, FileAndLock("/tmp/test-2.txt")));
-  for (int i = 0; i < 6; ++i) {
-    threads.emplace_back([i, &fileMap]() {
-      for (int j = 0; j < 5; ++j) {
-        lock_guard<mutex> lock(*fileMap[i % 3].fileLock);
-        *fileMap[i % 3].fileToAppend << "Thread #" << i << " couter: " << j << endl;
-      }
-    });
+template<typename T>
+class _DisplayType;
+
+template<typename T>
+void _displayType(T&& t);
+
+#define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
+
+/* template end */
+
+struct Foo : public std::enable_shared_from_this<Foo> { };
+
+TEST(Foo, Bar) {
+  {
+    EXPECT_EQ(1, 1);
+    auto p1 = std::make_shared<Foo>();
+    EXPECT_EQ(1, p1.use_count());
+    auto p2 = p1;
+    EXPECT_EQ(2, p1.use_count());
+    
+    auto rawPtr = p1.get();
+    std::shared_ptr<Foo> p3 = rawPtr->shared_from_this();
+    EXPECT_EQ(3, p1.use_count());
+    EXPECT_EQ(3, p3.use_count());
   }
-  for (auto& thr : threads) {
-    thr.join();
+  {
+    EXPECT_EQ(1, 1);
+    auto p1 = std::make_shared<std::string>();
+    EXPECT_EQ(1, p1.use_count());
+    auto p2 = p1;
+    EXPECT_EQ(2, p1.use_count());
+  
+    std::shared_ptr<std::string> p3(p1.get());
+    EXPECT_EQ(2, p1.use_count());
+    EXPECT_EQ(1, p3.use_count());
   }
-  return 0;
 }
+
+int main(int argc, char* argv[]) {
+  testing::InitGoogleTest(&argc, argv);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+  return RUN_ALL_TESTS();
+}
+
