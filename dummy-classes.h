@@ -22,12 +22,8 @@
 #include <valarray>
 #include <thread>
 #include <memory>
-//using namespace std;
-#define debug(x) std::cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<< std::endl;
-#define flag(x) FLAGS_##x
 
-template <typename... T>
-class TypeDebug;
+#include "header.h"
 
 class Base {
  public:
@@ -40,13 +36,25 @@ class Base {
   Base(Base&&) {
     std::cout << "Move ctor in " << __FUNCTION__ << " @" << this << std::endl;
   }
+  const Base& operator=(const Base&) {
+    std::cout << "Copy = in " << __FUNCTION__ << " @" << this << std::endl;
+    return *this;
+  }
+  const Base& operator=(Base&&) {
+    std::cout << "Move = in " << __FUNCTION__ << " @" << this << std::endl;
+    return *this;
+  }
   ~Base() {
     std::cout << "Dtor in " << __FUNCTION__ << " @" << this << std::endl;
   }
   void print() const {
-    debug(a_);
+    PEEK(a_);
   }
- private:
+  void set(int a) {
+    a_ = a;
+  }
+
+ protected:
   int a_ = 10;
 };
 

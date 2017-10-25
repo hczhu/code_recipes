@@ -26,5 +26,10 @@
 #include <valarray>
 #include <vector>
 
-//using namespace std;
-#define debug(x) std::cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<< std::endl;
+#define PEEK(x) std::cout << #x << ": [" << (x) << "]" << std::endl;
+
+template<typename T>
+class _DisplayType;
+
+template<typename T>
+void _displayType(T&& t);
