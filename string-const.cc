@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -29,7 +28,9 @@
 
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <gtest/gtest.h>
+
+#include <folly/Range.h>
+#include <folly/FixedString.h>
 
 template<typename T>
 class _DisplayType;
@@ -41,38 +42,34 @@ void _displayType(T&& t);
 
 /* template end */
 
-struct Foo : public std::enable_shared_from_this<Foo> { };
-
-TEST(Foo, Bar) {
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<Foo>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
-    
-    auto rawPtr = p1.get();
-    std::shared_ptr<Foo> p3 = rawPtr->shared_from_this();
-    EXPECT_EQ(3, p1.use_count());
-    EXPECT_EQ(3, p3.use_count());
-  }
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<std::string>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
-  
-    std::shared_ptr<std::string> p3(p1.get());
-    EXPECT_EQ(2, p1.use_count());
-    EXPECT_EQ(1, p3.use_count());
-  }
+// const folly::StringPiece
+inline folly::StringPiece constexpr spVariable() {
+  return "const-sp";
 }
+
+// const foly::FixedString.
+inline auto constexpr prefix() {
+  return  folly::makeFixedString("prefix");
+}
+
+inline auto constexpr constFS() {
+  return prefix() + folly::makeFixedString(".suffix");
+}
+
+// const string
+static auto const gV = std::string_literals::operator""s("const-string", 11);
+
+using namespace std::string_literals;
+static auto const variable = "const-string"s;
 
 int main(int argc, char* argv[]) {
-  testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-  return RUN_ALL_TESTS();
+  // _displayType(derived());
+  PEEK(spVariable());
+  PEEK(prefix());
+  PEEK(constFS());
+  PEEK(gV);
+  PEEK(variable);
+  return 0;
 }
-

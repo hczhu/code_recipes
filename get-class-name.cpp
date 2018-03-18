@@ -27,9 +27,9 @@
 #include <valarray>
 #include <vector>
 
+#include <folly/Demangle.h>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <gtest/gtest.h>
 
 template<typename T>
 class _DisplayType;
@@ -41,38 +41,43 @@ void _displayType(T&& t);
 
 /* template end */
 
-struct Foo : public std::enable_shared_from_this<Foo> { };
+class ClassNameTrait {
+  public:
+    ClassNameTrait()
+      : getName_(
+          [this] { return folly::demangle(typeid(*this)).toStdString(); }),
+      name_(typeid(*this).name()) {
+        PEEK(name_);
+     };
 
-TEST(Foo, Bar) {
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<Foo>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
-    
-    auto rawPtr = p1.get();
-    std::shared_ptr<Foo> p3 = rawPtr->shared_from_this();
-    EXPECT_EQ(3, p1.use_count());
-    EXPECT_EQ(3, p3.use_count());
-  }
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<std::string>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
+    std::string getName() const {
+      return getName_();
+    }
+    // virtual is important. If not used, the types are not polymorphic.
+    virtual ~ClassNameTrait() = default;
+  private:
+    std::string name_;
+    std::function<std::string()> getName_;
+};
+
+class MyClass : public ClassNameTrait {
   
-    std::shared_ptr<std::string> p3(p1.get());
-    EXPECT_EQ(2, p1.use_count());
-    EXPECT_EQ(1, p3.use_count());
-  }
-}
+};
+
+template<typename T>
+class TClass : public ClassNameTrait {
+
+};
 
 int main(int argc, char* argv[]) {
-  testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-  return RUN_ALL_TESTS();
+  PEEK(MyClass().getName());
+  MyClass my;
+  const ClassNameTrait& cnt = my;
+  PEEK(cnt.getName());
+  PEEK(my.getName());
+  PEEK(TClass<int>().getName());
+  return 0;
 }
 

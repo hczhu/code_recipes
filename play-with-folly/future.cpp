@@ -1,5 +1,3 @@
-#include "../header.h"
-
 #include <iostream>
 
 // #include <glog/logging.h>
@@ -13,8 +11,8 @@
 DEFINE_int32(haha, -1, "");
 
 int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  // google::InitGoogleLogging(argv[0]);
-  // LOG(INFO) << "haha = " << FLAGS_haha;
+  google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+  LOG(INFO) << "haha = " << FLAGS_haha;
   return 0;
 }
