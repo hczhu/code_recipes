@@ -35,6 +35,13 @@ void print(Policy& outputStream, const Arg1& arg1, const Args&... args) {
   print(outputStream, args...);
 }
 
+template<typename... Args>
+void confirm(const Args&... msg) {
+
+}
+
+
+
 int main() {
   print(cout, 1, 2, "sfsfd", 1.34243, 'a', 3241234);
   string ss;
