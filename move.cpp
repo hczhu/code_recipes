@@ -37,13 +37,15 @@ typename std::remove_reference<T>::type&& move(const T&& v) = delete;
 
 template <typename T>
 typename std::remove_reference<T>::type&& move(T&& v) noexcept {
-  debug("heha");
   return static_cast<typename std::remove_reference<T>::type&&>(v);
 }
 
 
 
 int main() {
+  Base b;
+  std::pair<const Base, Base> pr(b, std::move(b));
+  return 0;
   const Base aa;
   // DisplayType<decltype(std::move(aa))> dt;
   auto bb = move(aa);

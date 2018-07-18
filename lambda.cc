@@ -26,6 +26,12 @@
 using namespace std;
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 
+template<typename T>
+class _DisplayType;
+
+template<typename T>
+void _displayType(T&& t);
+
 int main() {
   int thread_num = 10;
   int count = 0;
@@ -47,5 +53,17 @@ int main() {
     vect.push_back(10);
   };
   func();
+  std::function<void()> a = {};
+  std::function<void()> b = [] {};
+  if (a) {
+    std::cout << "a is not null";
+  }
+  if (b) {
+    std::cout << "b is not null";
+  }
+  std::function<void()> c = <::> <%%>;
+
+  // _displayType(a);
+  // _displayType(b);
   return 0;
 }

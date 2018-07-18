@@ -29,34 +29,16 @@
 using namespace std;
 
 template<typename T>
-void foo(T&& bases) {
-  // DisplayType<decltype(bases)> disp1;
-  for (auto b : bases) {
-    // DisplayType<decltype(b)> disp1;
-    b.print();
-  }
-}
+void _displayType(T&& t);
 
-void mapFor(const std::map<std::string, std::string>& mp) {
+void bar(std::map<int, std::string>&& mp) {
   for (auto& pr : mp) {
-    DisplayType<decltype(pr)> disp;
+    _displayType(pr);
   }
 }
 
 int main() {
-  // foo(std::vector<Base>());
-  std::vector<Base> bases(3);
-  // const auto& ref = bases;
-  debug("-----");
-  foo(bases);
-
-  std::string haha;
-  auto& hf = haha;
-
-  DisplayType<decltype(hf)> disp;
-
-  std::unique_ptr<int> intp(new int(10));
-  std::vector<decltype(intp)> intv(1, std::move(intp));
-
+  std::map<int, std::string> mp;
+  bar(std::move(mp));
   return 0;
 }
