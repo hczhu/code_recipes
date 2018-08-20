@@ -42,10 +42,12 @@ TEST(Foo, Bar) {
     aa.set(-100);
     aa.print();
   };
-  auto f1 = [a] {
-    std::cout << "Move lambda capture." << std::endl;
-    a.print();
+  std::cout << "---------------" << std::endl;
+  auto f1 = [b = a] {
+    std::cout << "Copy lambda capture." << std::endl;
+    b.print();
   };
+  std::cout << "---------------" << std::endl;
   f();
   f1();
 }
