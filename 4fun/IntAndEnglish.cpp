@@ -143,7 +143,18 @@ TEST(IntAndEnglish, Basic) {
 
 TEST(IntAndEnglish, Everything) {
   size_t kMax = 2e9;
-  for (size_t v = 1; v < kMax; ++v) {
+  for (size_t v = 1; v < kMax; v += (rand() % 1000)) {
+    const auto english = int2English(v);
+    LOG_EVERY_N(INFO, 10000) << v << " = " << english;
+    ASSERT_EQ(v, english2Int(english));
+  }
+  for (size_t v = 1; v <= kMax; v *= 10) {
+    for (size_t d = 0; d < 100 && d < v; ++d) {
+      ASSERT_EQ(v - d , english2Int(int2English(v - d)));
+      ASSERT_EQ(v + d, english2Int(int2English(v + d)));
+    }
+  }
+  for (size_t v = 1; v <= kMax; v = (v << 1) ^ (rand() & 1)) {
     ASSERT_EQ(v, english2Int(int2English(v)));
   }
 }
