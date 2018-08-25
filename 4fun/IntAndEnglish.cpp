@@ -40,13 +40,13 @@ void _displayType(T&& t);
 #define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
 
 using Mp = std::map<size_t, std::string>;
-const Mp name3 = {
+Mp name3 = {
   {1000000000, "billion"},
   {1000000, "million"},
   {1000, "thousand"},
 };
 
-const Mp name2 = {
+Mp name2 = {
   {1, "one"},
   {2, "two"},
   {3, "three"},
@@ -78,20 +78,72 @@ const Mp name2 = {
   {90, "ninty"},
 };
 
+std::map<std::string, size_t> name3r, name2r;
+const std::string hundred = "hundred";
+
 std::string int2English(size_t val) {
   auto convert100 = [](size_t val) {
-    return
-      val / 100 ? ()
+    std::string res;
+    if (val / 100) {
+      res += " " + name2[val / 100] + " " + hundred;
+      val %= 100;
+    }
+    auto appendIf = [&](size_t val) {
+      if (name2.count(val)) {
+        res += " " + name2[val];
+        return true;
+      }
+      return false;
+    };
+    if (!appendIf(val)) {
+      appendIf(val / 10 * 10);
+      appendIf(val % 10);
+    }
+    return res.substr(1);
   };
+  std::string res;
+  for (auto itr = name3.rbegin(); itr != name3.rend(); ++itr) {
+    if (val / itr->first) {
+      res += " " + convert100(val / itr->first) + " " + itr->second;
+      val %= itr->first;
+    }
+  }
+  if (val) {
+    res += " " + convert100(val);
+  }
+  return res.substr(1);
 }
 
 size_t english2Int(const std::string& eng) {
-
+  std::istringstream is(eng);
+  std::string word;
+  size_t res = 0;
+  size_t below1000 = 0;
+  while (is >> word) {
+    if (name3r.count(word)) {
+      res += below1000 * name3r[word];
+      below1000 = 0;
+    } else if (name2r.count(word)) {
+      below1000 += name2r[word];
+    } else if (word == hundred) {
+      below1000 *= 100;
+    } else {
+      LOG(FATAL) << "Illegal input: " << eng;
+    }
+  }
+  return res + below1000;
 }
 
-TEST(IntAndEnglish, huge) {
+TEST(IntAndEnglish, Basic) {
+  EXPECT_EQ("two billion one hundred three thousand fifteen", int2English(2000103015));
+  EXPECT_EQ("eighty one million one hundred three thousand ten", int2English(81103010));
+  EXPECT_EQ("one hundred thirty billion", int2English(130000000000));
+  EXPECT_EQ("one hundred thirty billion fifty one million eight", int2English(130051000008));
+}
+
+TEST(IntAndEnglish, Everything) {
   for (size_t v = 1; v < 1e10; ++v) {
-    EXPECT_EQ(v, englis2Int(int2English(v)));
+    ASSERT_EQ(v, english2Int(int2English(v)));
   }
 }
 
@@ -99,6 +151,12 @@ int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+  for (const auto& pr : name3) {
+    name3r.emplace(pr.second, pr.first);
+  }
+  for (const auto& pr : name2) {
+    name2r.emplace(pr.second, pr.first);
+  }
   return RUN_ALL_TESTS();
 }
 
