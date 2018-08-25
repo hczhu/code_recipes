@@ -139,11 +139,16 @@ TEST(IntAndEnglish, Basic) {
   EXPECT_EQ("eighty one million one hundred three thousand ten", int2English(81103010));
   EXPECT_EQ("one hundred thirty billion", int2English(130000000000));
   EXPECT_EQ("one hundred thirty billion fifty one million eight", int2English(130051000008));
+
+  EXPECT_EQ(2000103015, english2Int("two billion one hundred three thousand fifteen"));
+  EXPECT_EQ(81103010, english2Int("eighty one million one hundred three thousand ten"));
+  EXPECT_EQ(130000000000, english2Int("one hundred thirty billion"));
+  EXPECT_EQ(130051000008, english2Int("one hundred thirty billion fifty one million eight"));
 }
 
 TEST(IntAndEnglish, Everything) {
   size_t kMax = 2e9;
-  for (size_t v = 1; v < kMax; v += (rand() % 1000)) {
+  for (size_t v = 1; v < kMax; v += (rand() % 10000)) {
     const auto english = int2English(v);
     LOG_EVERY_N(INFO, 10000) << v << " = " << english;
     ASSERT_EQ(v, english2Int(english));
