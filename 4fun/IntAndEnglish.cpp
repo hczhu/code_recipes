@@ -142,7 +142,8 @@ TEST(IntAndEnglish, Basic) {
 }
 
 TEST(IntAndEnglish, Everything) {
-  for (size_t v = 1; v < 1e10; ++v) {
+  size_t kMax = 2e9;
+  for (size_t v = 1; v < kMax; ++v) {
     ASSERT_EQ(v, english2Int(int2English(v)));
   }
 }
