@@ -34,20 +34,28 @@ constexpr typename std::decay<T>::type copy(T&& value) noexcept(
 
 template <typename T>
 typename std::remove_reference<T>::type&& move(const T&& v) = delete;
-
 template <typename T>
 typename std::remove_reference<T>::type&& move(T&& v) noexcept {
   return static_cast<typename std::remove_reference<T>::type&&>(v);
 }
 
+template<typename T>
+class _DisplayType;
 
+template<typename T>
+void _displayType(T&& t);
+
+void foo() {
+  std::map<int, Derived> mp = {
+    {1, Derived()},
+  };
+  std::cout << "-----------------------" << std::endl;
+  _displayType(mp.begin());
+  for (auto pr : mp) {
+  }
+}
 
 int main() {
-  Base b;
-  std::pair<const Base, Base> pr(b, std::move(b));
-  return 0;
-  const Base aa;
-  // DisplayType<decltype(std::move(aa))> dt;
-  auto bb = move(aa);
+  foo();
   return 0;
 }
