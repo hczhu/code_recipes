@@ -48,13 +48,13 @@ struct Vec {
     return res;
   }
   template<typename Arg1, typename... Args>
-  void add(Arg1 ele, Args&&... eles) {
+  void add(Arg1 ele, Args... eles) {
     add(ele);
     add(eles...);
   }
   
   template<typename Arg>
-  void add(Arg&& ele) {
+  void add(Arg ele) {
     vec_.push_back(int(ele));
   }
 
