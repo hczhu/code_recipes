@@ -56,13 +56,14 @@ std::enable_if_t<std::is_placeholder<OutputType>::value, void>
 }
 
 TEST(Foo, Bar) {
+  namespace Pl = std::placeholders;
   std::string output;
   toMaybePlaceholder("haha", output);
   EXPECT_EQ("haha", output);
   
-  toMaybePlaceholder("", std::placeholders::_1);
+  toMaybePlaceholder("", Pl::_1);
   EXPECT_EQ("haha", output);
-  toMaybePlaceholder("", std::placeholders::_2);
+  toMaybePlaceholder("", Pl::_2);
   EXPECT_EQ("haha", output);
 }
 
