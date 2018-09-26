@@ -24,6 +24,13 @@
 #include <memory>
 using namespace std;
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
+
+template<typename T>
+class _DisplayType;
+
+template<typename T>
+void _displayType(T&& t);
+
 template<typename Policy>
 void print(Policy& outputStream) {
   outputStream << std::endl;
@@ -62,6 +69,8 @@ struct Vec {
 };
 
 int main() {
+  _displayType(std::placeholders::_1);
+  _displayType(std::placeholders::_2);
   print(cout, 1, 2, "sfsfd", 1.34243, 'a', 3241234);
   string ss;
   stringstream os(ss);
