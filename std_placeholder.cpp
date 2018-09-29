@@ -55,7 +55,16 @@ std::enable_if_t<std::is_placeholder<OutputType>::value, void>
   toMaybePlaceholder(std::string, OutputType& output) {
 }
 
-void toMaybePlaceholder(std::string, decltype(std::ignore)) {
+void toOrIgnore(std::string, decltype(std::ignore)&) {
+}
+
+
+template <class OutputType>
+// std::enable_if_t<!std::is_same<OutputType, decltype(std::ignore)>::value, void>
+void toOrIgnore(std::string input, OutputType& output) {
+  static_assert(std::is_same<OutputType, decltype(std::ignore)>::value == 0,
+                "sholdn't be std::ignore");
+  output = input;
 }
 
 
@@ -69,8 +78,13 @@ TEST(Foo, Bar) {
   EXPECT_EQ("haha", output);
   toMaybePlaceholder("", Pl::_2);
   EXPECT_EQ("haha", output);
-  toMaybePlaceholder("", std::ignore);
+  static_assert(std::is_placeholder<decltype(std::ignore)>::value == 0,
+    "shouldn't be a placeholder.");
+
+  toOrIgnore("", std::ignore);
   EXPECT_EQ("haha", output);
+  toOrIgnore("", output);
+  EXPECT_EQ("", output);
 }
 
 int main(int argc, char* argv[]) {
