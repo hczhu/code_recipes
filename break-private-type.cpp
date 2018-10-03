@@ -50,6 +50,8 @@ class Foo {
 
   void bar(PrivateTag) {}
 
+  static void sbar(PrivateTag) {}
+
  private:
   const int a_;
 };
@@ -59,17 +61,15 @@ T extract(void(Foo::*)(T)) {
   return T();
 }
 
-/*
 template<typename T>
-T extractByRef(void(Foo::&)(T)) {
+T extractByRef(void(&)(T)) {
   return T();
 }
-*/
 
 
 TEST(Foo, Bar) {
   Foo foo(-1, extract(&Foo::bar));
-  auto ptr = &Foo::bar;
+  Foo foo1(-1, extractByRef(Foo::sbar));
 }
 
 int main(int argc, char* argv[]) {
