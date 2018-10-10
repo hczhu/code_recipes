@@ -44,7 +44,11 @@ void print(Policy& outputStream, const Arg1& arg1, const Args&... args) {
 
 template<typename... Args>
 void confirm(const Args&... msg) {
-
+  int _[] = {
+    (std::cout << msg << " ", 0)...
+  };
+  std::cout << " N/y?" << std::endl;
+  (void)_;
 }
 
 struct Vec {
@@ -69,8 +73,6 @@ struct Vec {
 };
 
 int main() {
-  _displayType(std::placeholders::_1);
-  _displayType(std::placeholders::_2);
   print(cout, 1, 2, "sfsfd", 1.34243, 'a', 3241234);
   string ss;
   stringstream os(ss);
@@ -84,5 +86,6 @@ int main() {
     vec->vec_[2],
     vec->vec_[3]
   );
+  confirm(1, 2, "aaa", 1.2, 1.5, -1);
   return 0;
 }
