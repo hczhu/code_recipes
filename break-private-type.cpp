@@ -70,6 +70,9 @@ T extractByRef(void(&)(T)) {
 TEST(Foo, Bar) {
   Foo foo(-1, extract(&Foo::bar));
   Foo foo1(-1, extractByRef(Foo::sbar));
+  auto p = &Foo::bar;
+  // Doesn't compilej
+  // auto& pref = &Foo::bar;
 }
 
 int main(int argc, char* argv[]) {

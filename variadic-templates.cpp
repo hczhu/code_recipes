@@ -72,7 +72,12 @@ struct Vec {
   std::vector<int> vec_;
 };
 
+int foo(int) {
+  return -1;
+}
+
 int main() {
+  auto& t = foo;
   print(cout, 1, 2, "sfsfd", 1.34243, 'a', 3241234);
   string ss;
   stringstream os(ss);
