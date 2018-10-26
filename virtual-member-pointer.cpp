@@ -56,26 +56,26 @@ class B : public A {
     return 1;
   }
 
-  std::vector<int> bar(int, double) {
+  std::vector<int> bar(int, const std::string&) {
     return {
       0
     };
   }
-  std::vector<int> bar(double) {
+  std::vector<int> bar(const std::string&) {
     return {
       1
     };
   }
   template <typename R, typename... Args>
-  using method_ptr_t = std::vector<R> (B::*)(int, Args...);
+  using method_ptr_t = std::vector<R> (B::*)(int, const Args&...);
 
   template <typename R, typename... Args>
-  std::vector<R> forward(method_ptr_t<R, Args...> m, int v, Args&&... args);
+  std::vector<R> forward(method_ptr_t<R, Args...> m, int v, const Args&... args);
 };
 
 template <typename R, typename... Args>
-std::vector<R> B::forward(method_ptr_t<R, Args...> m, int v, Args&&... args) {
-  return (this->*m)(v, std::forward<Args>(args)...);
+std::vector<R> B::forward(method_ptr_t<R, Args...> m, int v, const Args&... args) {
+  return (this->*m)(v, args...);
 }
 
 TEST(Foo, Bar) {
@@ -85,8 +85,8 @@ TEST(Foo, Bar) {
   Mptr ptr = &A::foo;
   LOG(INFO) << "virtual method pointer: " << ptr;
   EXPECT_EQ(1, (a->*ptr)());
-
-  EXPECT_EQ(std::vector<int>({0}), b.forward(&B::bar, 0, 1.1));
+  std::string ss("aa");
+  EXPECT_EQ(std::vector<int>({0}), b.forward(&B::bar, 0, ss));
 }
 
 int main(int argc, char* argv[]) {
