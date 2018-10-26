@@ -45,25 +45,48 @@ void _displayType(T&& t);
 class A {
  public:
   virtual ~A() = default;
-  virtual int foo() const {
+  virtual int foo() {
     return 0;
   }
 };
 
 class B : public A {
  public:
-  int foo() const override {
+  int foo() override {
     return 1;
   }
+
+  std::vector<int> bar(int, double) {
+    return {
+      0
+    };
+  }
+  std::vector<int> bar(double) {
+    return {
+      1
+    };
+  }
+  template <typename R, typename... Args>
+  using method_ptr_t = std::vector<R> (B::*)(int, Args...);
+
+  template <typename R, typename... Args>
+  std::vector<R> forward(method_ptr_t<R, Args...> m, int v, Args&&... args);
 };
 
+template <typename R, typename... Args>
+std::vector<R> B::forward(method_ptr_t<R, Args...> m, int v, Args&&... args) {
+  return (this->*m)(v, std::forward<Args>(args)...);
+}
+
 TEST(Foo, Bar) {
-  const B b;
-  const A* a = &b;
-  using Mptr = int(A::*)() const;
+  B b;
+  A* a = &b;
+  using Mptr = int(A::*)();
   Mptr ptr = &A::foo;
   LOG(INFO) << "virtual method pointer: " << ptr;
   EXPECT_EQ(1, (a->*ptr)());
+
+  EXPECT_EQ(std::vector<int>({0}), b.forward(&B::bar, 0, 1.1));
 }
 
 int main(int argc, char* argv[]) {
