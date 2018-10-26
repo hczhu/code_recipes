@@ -56,14 +56,18 @@ class B : public A {
     return 1;
   }
 
-  std::vector<int> bar(int, const std::string&) {
+  std::vector<std::map<int, int>> bar(int, const std::string&) {
     return {
-      0
+    {
+      {0, 0}
+    }
     };
   }
-  std::vector<int> bar(const std::string&) {
+  std::vector<std::map<int, int>> bar(const std::string&) {
     return {
-      1
+      {
+        {1, 1}
+      }
     };
   }
   template <typename R, typename... Args>
@@ -86,7 +90,7 @@ TEST(Foo, Bar) {
   LOG(INFO) << "virtual method pointer: " << ptr;
   EXPECT_EQ(1, (a->*ptr)());
   std::string ss("aa");
-  EXPECT_EQ(std::vector<int>({0}), b.forward(&B::bar, 0, ss));
+  EXPECT_EQ(1, b.forward(&B::bar, 0, ss)[0].count(0));
 }
 
 int main(int argc, char* argv[]) {
