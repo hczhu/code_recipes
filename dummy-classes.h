@@ -28,23 +28,29 @@
 class Base {
  public:
   Base() {
+    ++CtorCnt;
     std::cout << "ctor in " << __FUNCTION__ << " @" << this << std::endl;
   }
   Base(const Base&) {
+    ++CopyCnt;
     std::cout << "Copy ctor in " << __FUNCTION__ << " @" << this << std::endl;
   }
   Base(Base&&) {
+    ++MoveCnt;
     std::cout << "Move ctor in " << __FUNCTION__ << " @" << this << std::endl;
   }
   const Base& operator=(const Base&) {
+    ++CopyCnt;
     std::cout << "Copy = in " << __FUNCTION__ << " @" << this << std::endl;
     return *this;
   }
   const Base& operator=(Base&&) {
+    ++MoveCnt;
     std::cout << "Move = in " << __FUNCTION__ << " @" << this << std::endl;
     return *this;
   }
   ~Base() {
+    ++DtorCnt;
     std::cout << "Dtor in " << __FUNCTION__ << " @" << this << std::endl;
   }
   void print() const {
@@ -54,9 +60,17 @@ class Base {
     a_ = a;
   }
 
+  static size_t MoveCnt;
+  static size_t CopyCnt;
+  static size_t DtorCnt;
+  static size_t CtorCnt;
  protected:
   int a_ = 10;
 };
+size_t Base::MoveCnt = 0;
+size_t Base::CopyCnt = 0;
+size_t Base::DtorCnt = 0;
+size_t Base::CtorCnt = 0;
 
 class Derived : public Base {
  public:
