@@ -68,6 +68,8 @@ T extractByRef(void(&)(T)) {
 
 
 TEST(Foo, Bar) {
+  // Foo foo0(-1, extract(&Foo::Foo));
+
   Foo foo(-1, extract(&Foo::bar));
   Foo foo1(-1, extractByRef(Foo::sbar));
   auto p = &Foo::bar;
