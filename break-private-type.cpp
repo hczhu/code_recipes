@@ -62,7 +62,8 @@ T extract(void(Foo::*)(T)) {
 }
 
 template<typename T>
-T extractByRef(void(&)(T)) {
+T extractByRef(void(&funRef)(T)) {
+  funRef(T());
   return T();
 }
 
