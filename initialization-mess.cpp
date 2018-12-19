@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -49,9 +48,25 @@ struct A {
   A(int i, int j) : a(i), b(j) {}
 };
 
+struct B {
+  A a{1, 2};
+  std::vector<int> ints{std::vector<int>(3)};
+  std::vector<short> shorts = std::vector<short>(3);
+};
+
 /* template end */
 
 TEST(InitializationMess, VectorMess) {
+  B b;
+  EXPECT_EQ(1, b.a.a);
+  EXPECT_EQ(2, b.a.b);
+  EXPECT_EQ(3, b.ints.size());
+  EXPECT_EQ(3, b.shorts.size());
+  std::vector<B> vb(2);
+  for (const auto& b : vb) {
+    EXPECT_EQ(1, b.a.a);
+    EXPECT_EQ(2, b.a.b);
+  }
   EXPECT_EQ(2, echo({ 10, 20 }).size());
   EXPECT_EQ(std::vector<int>({10, 20}), echo({ 10, 20 }));
   // std::vector has initializer_list ctor.
