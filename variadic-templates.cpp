@@ -1,4 +1,3 @@
-
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
@@ -23,6 +22,11 @@
 #include <thread>
 #include <memory>
 using namespace std;
+
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <gtest/gtest.h>
+
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 
 template<typename T>
@@ -76,7 +80,12 @@ int foo(int) {
   return -1;
 }
 
-int main() {
+template<class... Container>
+bool anyEmptyContainer(const Container&... args) {
+  return (...|| args.empty());
+}
+
+TEST(Main, Main) {
   auto& t = foo;
   print(cout, 1, 2, "sfsfd", 1.34243, 'a', 3241234);
   string ss;
@@ -92,5 +101,26 @@ int main() {
     vec->vec_[3]
   );
   confirm(1, 2, "aaa", 1.2, 1.5, -1);
-  return 0;
+}
+
+TEST(Variadic, IfExpansion) {
+  EXPECT_TRUE(anyEmptyContainer(std::string(), std::string("dfa")));
+  EXPECT_FALSE(anyEmptyContainer(std::vector<int>({
+                                     1, 2,
+                                 }),
+                                 std::vector<int>({
+                                     3,
+                                 })));
+
+  EXPECT_TRUE(anyEmptyContainer(std::vector<int>({}),
+                                std::vector<int>({
+                                    3,
+                                })));
+}
+
+int main(int argc, char* argv[]) {
+  testing::InitGoogleTest(&argc, argv);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+  return RUN_ALL_TESTS();
 }
