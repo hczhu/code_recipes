@@ -10,11 +10,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
-#include <limits>
 #include <limits.h>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -27,9 +28,10 @@
 #include <valarray>
 #include <vector>
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <gtest/gtest.h>
+// #include <gtest/gmock.h>
 
 template<typename T>
 class _DisplayType;
@@ -41,46 +43,27 @@ void _displayType(T&& t);
 
 /* template end */
 
-struct Foo : public std::enable_shared_from_this<Foo> { };
-
-class A {
-
+struct A {
+  int a;
+  int b = 1;
+  int c{-2};
+  std::string haha = "haha";
 };
-
-class B : public A {
-
-};
-
-void foo(std::shared_ptr<A>) {
-
-}
 
 TEST(Foo, Bar) {
-  foo(std::make_shared<B>());
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<Foo>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
-    
-    auto rawPtr = p1.get();
-    std::shared_ptr<Foo> p3 = rawPtr->shared_from_this();
-    EXPECT_EQ(3, p1.use_count());
-    EXPECT_EQ(3, p3.use_count());
-  }
-  {
-    EXPECT_EQ(1, 1);
-    auto p1 = std::make_shared<std::string>();
-    EXPECT_EQ(1, p1.use_count());
-    auto p2 = p1;
-    EXPECT_EQ(2, p1.use_count());
-    /*
-    std::shared_ptr<std::string> p3(p1.get());
-    EXPECT_EQ(2, p1.use_count());
-    EXPECT_EQ(1, p3.use_count());
-    */
-  }
+  A a;
+  EXPECT_EQ("haha", a.haha);
+
+  const A& aa = A();
+  EXPECT_EQ("haha", aa.haha);
+
+  A aaa{
+    .a = 10,
+    .b = 20,
+  };
+  EXPECT_EQ(10, aaa.a);
+  EXPECT_EQ(-2, aaa.c);
+  EXPECT_EQ("haha", aaa.haha);
 }
 
 int main(int argc, char* argv[]) {
