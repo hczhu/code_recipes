@@ -40,6 +40,9 @@ void print(Policy& outputStream) {
   outputStream << std::endl;
 }
 
+template<typename... Args>
+using VT = int;
+
 template<typename Policy, typename Arg1, typename... Args>
 void print(Policy& outputStream, const Arg1& arg1, const Args&... args) {
   outputStream << arg1 << " ";
@@ -83,6 +86,10 @@ int foo(int) {
 template<class... Container>
 bool anyEmptyContainer(const Container&... args) {
   return (...|| args.empty());
+}
+
+TEST(Main, VariadicUsing) {
+  static_assert(std::is_same_v<VT<int, double, std::string>, int>);
 }
 
 TEST(Main, Main) {
