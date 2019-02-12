@@ -125,6 +125,26 @@ TEST(Variadic, IfExpansion) {
                                 })));
 }
 
+
+template <typename R>
+struct remove_container {
+  using type = R;
+};
+
+template <typename R>
+struct remove_container<std::vector<R>> {
+  using type = R;
+};
+
+template <typename R>
+using remove_container_t = typename remove_container<R>::type;
+
+TEST(Variadic, removeContainer) {
+  static_assert(std::is_same_v<remove_container_t<std::string>, std::string>);
+  static_assert(std::is_same_v<remove_container_t<std::vector<std::string>>,
+                               std::string>);
+}
+
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
