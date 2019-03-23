@@ -29,7 +29,7 @@ using namespace std;
 
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 
-template<typename T>
+template<typename... T>
 class _DisplayType;
 
 template<typename T>
@@ -143,6 +143,39 @@ TEST(Variadic, removeContainer) {
   static_assert(std::is_same_v<remove_container_t<std::string>, std::string>);
   static_assert(std::is_same_v<remove_container_t<std::vector<std::string>>,
                                std::string>);
+}
+
+template<typename T>
+struct add_const_ref {
+  using type = const T&;
+};
+
+template<>
+struct add_const_ref<int> {
+  using type = int;
+};
+
+template<typename T>
+using add_const_ref_t = typename add_const_ref<T>::type;
+
+int foo(std::string&, int, int) {
+  return 1;
+}
+
+template <typename... Args>
+void forwardToFoo(const Args&... args) {
+  // _DisplayType<add_const_ref_t<Args>...> dd;
+  static_assert(std::is_same_v<std::tuple<add_const_ref_t<Args>...>,
+                               std::tuple<const std::string&, int, int>>);
+}
+
+TEST(Main, transformArgs) {
+  std::string a;
+  // EXPECT_EQ(forwardToFoo(a), 1);
+  static_assert(std::is_same_v<int, add_const_ref_t<int>>);
+  static_assert(
+      std::is_same_v<const std::string&, add_const_ref_t<std::string>>);
+  forwardToFoo(a, 1, 2);
 }
 
 int main(int argc, char* argv[]) {
