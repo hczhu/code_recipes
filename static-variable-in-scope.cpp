@@ -54,7 +54,7 @@ class FooTest : public testing::Test {
 TEST_F(FooTest, Bar) {
   Base a;
   {
-    Base b;
+    Base d;
     static Base c;
   }
   EXPECT_EQ(2, Base::LiveCnt);
@@ -69,12 +69,21 @@ TEST_F(FooTest, Bar) {
       }
     }
   };
-  for (int i = 0; i < 100; ++i) {
-    logIt();
-    EXPECT_EQ(3, Base::LiveCnt);
-    EXPECT_EQ(1, Base::DtorCnt);
+  std::vector<std::thread> threads;
+  for (int t = 0; t < 10; ++t) {
+    threads.emplace_back([logIt] {
+      for (int i = 0; i < 100; ++i) {
+        logIt();
+        EXPECT_EQ(3, Base::LiveCnt);
+        EXPECT_EQ(1, Base::DtorCnt);
+      }
+    });
+  }
+  for (auto& thr : threads) {
+    thr.join();
   }
   EXPECT_EQ(3, Base::LiveCnt);
+  EXPECT_EQ(1, Base::DtorCnt);
 }
 
 int main(int argc, char* argv[]) {
