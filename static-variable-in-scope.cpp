@@ -53,7 +53,13 @@ class FooTest : public testing::Test {
 
 template<typename F>
 void callF(F&& f) {
+  static Base b;
   f();
+}
+
+template<typename F>
+void createStatic() {
+  static Base b;
 }
 
 TEST_F(FooTest, Bar) {
@@ -106,15 +112,23 @@ TEST_F(FooTest, Bar) {
       threads.emplace_back([logIt] {
         for (int i = 0; i < 100; ++i) {
           callF(logIt);
-          EXPECT_EQ(4, Base::LiveCnt);
+          EXPECT_EQ(5, Base::LiveCnt);
         }
       });
     }
     for (auto &thr : threads) {
       thr.join();
     }
-    EXPECT_EQ(4, Base::LiveCnt);
+    EXPECT_EQ(5, Base::LiveCnt);
   }
+
+  createStatic<int>();
+  EXPECT_EQ(6, Base::LiveCnt);
+  createStatic<int>();
+  EXPECT_EQ(6, Base::LiveCnt);
+
+  createStatic<double>();
+  EXPECT_EQ(7, Base::LiveCnt);
 }
 
 int main(int argc, char* argv[]) {
