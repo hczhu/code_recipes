@@ -51,6 +51,11 @@ class FooTest : public testing::Test {
   void TearDown() override {}
 };
 
+template<typename F>
+void callF(F&& f) {
+  f();
+}
+
 TEST_F(FooTest, Bar) {
   Base a;
   {
@@ -63,27 +68,53 @@ TEST_F(FooTest, Bar) {
     }
   }
   EXPECT_EQ(2, Base::LiveCnt);
-  auto logIt = [] {
-    for (bool once = true; once;) {
-      for (static Base d; once; once = false) {
+  {
+    auto logIt = [] {
+      for (bool once = true; once;) {
+        for (static Base d; once; once = false) {
+        }
       }
+    };
+    std::vector<std::thread> threads;
+    for (int t = 0; t < 10; ++t) {
+      threads.emplace_back([logIt] {
+        for (int i = 0; i < 100; ++i) {
+          logIt();
+          EXPECT_EQ(3, Base::LiveCnt);
+          EXPECT_EQ(1, Base::DtorCnt);
+        }
+      });
     }
-  };
-  std::vector<std::thread> threads;
-  for (int t = 0; t < 10; ++t) {
-    threads.emplace_back([logIt] {
-      for (int i = 0; i < 100; ++i) {
-        logIt();
-        EXPECT_EQ(3, Base::LiveCnt);
-        EXPECT_EQ(1, Base::DtorCnt);
-      }
-    });
+    for (auto &thr : threads) {
+      thr.join();
+    }
+    EXPECT_EQ(3, Base::LiveCnt);
+    EXPECT_EQ(1, Base::DtorCnt);
   }
-  for (auto& thr : threads) {
-    thr.join();
+
+  {
+    std::vector<std::thread> threads;
+    for (int t = 0; t < 10; ++t) {
+      auto logIt = [t] {
+        for (bool once = true; once;) {
+          for (static Base d; once; once = false) {
+            LOG(INFO) << "thread #" << t;
+          }
+        }
+      };
+
+      threads.emplace_back([logIt] {
+        for (int i = 0; i < 100; ++i) {
+          callF(logIt);
+          EXPECT_EQ(4, Base::LiveCnt);
+        }
+      });
+    }
+    for (auto &thr : threads) {
+      thr.join();
+    }
+    EXPECT_EQ(4, Base::LiveCnt);
   }
-  EXPECT_EQ(3, Base::LiveCnt);
-  EXPECT_EQ(1, Base::DtorCnt);
 }
 
 int main(int argc, char* argv[]) {
