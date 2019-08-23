@@ -52,7 +52,7 @@ class Base {
     std::cout << "Move = in " << __FUNCTION__ << " @" << this << std::endl;
     return *this;
   }
-  ~Base() {
+  virtual ~Base() {
     ++DtorCnt;
     --LiveCnt;
     std::cout << "Dtor in " << __FUNCTION__ << " @" << this << std::endl;
@@ -89,7 +89,7 @@ class Derived : public Base {
   Derived(Base&&) {
     std::cout << "Move ctor in " << __FUNCTION__ << " @" << this << std::endl;
   }
-  ~Derived() {
+  ~Derived() override {
     std::cout << "Dtor in " << __FUNCTION__ << " @" << this << std::endl;
   }
 };
