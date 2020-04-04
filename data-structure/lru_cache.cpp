@@ -156,6 +156,10 @@ TEST_F(LruCacheTest, Simple) {
 
   cache.set(3, 3);
   EXPECT_EQ(nullptr, cache.get(0));
+
+  cache.set(4, 4);
+  EXPECT_EQ(nullptr, cache.get(2));
+
 }
 
 int main(int argc, char* argv[]) {
