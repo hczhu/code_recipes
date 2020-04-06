@@ -44,21 +44,38 @@ void _displayType(T&& t);
 /* template end */
 
 
-template<typename K, typename V>
+template <typename K, typename V>
 class LruCache {
  public:
-  explicit LruCache(size_t maxItems) : maxItems_(maxItems) {
+  explicit LruCache(size_t maxItems) : maxItems_(maxItems) {}
+  virtual ~LruCache() = default;
+
+  virtual void set(const K& k, const V& v) = 0;
+  virtual const V* get(const K& k) = 0;
+
+ protected:
+  const size_t maxItems_;
+};
+
+template <typename K,
+          typename V,
+          template <typename, typename, typename> typename HashSet>
+class LruCacheWithPointers : public LruCache<K, V> {
+ public:
+  using Super = LruCache<K, V>;
+
+  explicit LruCacheWithPointers(size_t maxItems) : LruCache<K, V>(maxItems) {
     head_.next = &tail_;
     tail_.prev = &head_;
   }
 
-  void set(const K &k, const V &v) {
+  void set(const K &k, const V &v) override {
     if (auto ptr = getImp(k)) {
       ptr->v = v;
       return;
     }
 
-    if (nodes_.size() == maxItems_) {
+    if (nodes_.size() == Super::maxItems_) {
       const auto deleted = nodes_.erase(*popTail());
       CHECK_EQ(1, deleted);
     }
@@ -71,7 +88,7 @@ class LruCache {
     pushToHead(&*(pr.first));
   }
 
-  const V* get(const K& k) {
+  const V* get(const K& k) override {
     auto ptr = getImp(k);
     return ptr ? &ptr->v : nullptr;
   }
@@ -94,7 +111,7 @@ class LruCache {
     bool operator()(const Node &l, const Node &r) const { return l.k == r.k; }
   };
 
-  using Set = std::unordered_set<Node, Hasher, Equal>;
+  using Set = HashSet<Node, Hasher, Equal>;
 
   const Node* getImp(const K& k) {
     Node node{
@@ -128,38 +145,188 @@ class LruCache {
     return nodePtr;
   }
 
-  const size_t maxItems_;
   Node head_;
   Node tail_;
   Set nodes_;
+};
+
+template <typename K,
+          typename V,
+          template <typename, typename, typename, typename> typename HashSet>
+class LruCacheWithIndexes : public LruCache<K, V> {
+ public:
+  using Super = LruCache<K, V>;
+  using Idx = uint32_t;
+
+  explicit LruCacheWithIndexes(size_t maxItems)
+      : LruCache<K, V>(maxItems),
+        nodes_(maxItems + 2),
+        tail_(maxItems + 1),
+        nodeSet_(maxItems, Allocator(nodes_)) {
+    nodes_[0].next = 1;
+    nodes_[tail_].prev = tail_ - 1;
+    for (Idx i = 1; i <= Super::maxItems_; ++i) {
+      nodes_[i].prev = i - 1;
+      nodes_[i].next = i + 1;
+    }
+  }
+
+  void set(const K &k, const V &v) override {
+    if (auto ptr = getImp(k)) {
+      ptr->v = v;
+      return;
+    }
+
+    if (nodes_.size() == Super::maxItems_) {
+      const auto deleted = nodeSet_.erase(nodes_[nodes_[0].next]);
+      CHECK_EQ(1, deleted);
+    }
+
+    Node node{
+        .k = k,
+        .v = v,
+    };
+    const auto pr = nodeSet_.insert(std::move(node));
+    CHECK(pr.second);
+
+    const Idx idx = nodes_[0].next;
+    CHECK_EQ(nodes_[idx].k, k);
+    CHECK_EQ(nodes_[idx].v, v);
+
+    nodes_[0].next = nodes_[idx].next;
+    nodes_[nodes_[0].next].prev = 0;
+
+    nodes_[idx].next = tail_;
+    nodes_[idx].prev = nodes_[tail_].prev;
+    nodes_[tail_].prev = idx;
+    nodes_[nodes_[idx].prev].next = idx;
+  }
+
+  const V* get(const K& k) override {
+    auto ptr = getImp(k);
+    return ptr ? &ptr->v : nullptr;
+  }
+
+ private:
+  struct Node {
+    K k;
+    mutable V v;
+    Idx prev;
+    Idx next; 
+  };
+  std::vector<Node> nodes_;
+  const Idx tail_;
+
+  struct Hasher {
+    size_t operator()(const Node& node) const noexcept {
+      return hasher(node.k);
+    }
+    std::hash<K> hasher;
+  };
+  struct Equal {
+    bool operator()(const Node &l, const Node &r) const { return l.k == r.k; }
+  };
+  struct Allocator : std::allocator<Node> {
+    explicit Allocator(std::vector<Node>& nodesArg) : nodes(nodesArg) {
+      LOG(INFO) << "Constructed an Allocator @" << this;
+    }
+
+    Node* allocate(std::size_t n) {
+      CHECK_EQ(1, n) << "Can only allocate one node.";
+      Idx ret = nodes[0].next;
+      nodes[0].next = nodes[ret].next;
+      nodes[nodes[0].next].prev = 0;
+      LOG(INFO) << "Allocated node @" << ret;
+      return &nodes[ret];
+    }
+
+    void deallocate(Node* p, std::size_t n) {
+      CHECK_EQ(1, n) << "Can only deallocate one node.";
+      const auto idx = p - &nodes[0];
+      nodes[idx].next = nodes[0].next;
+      nodes[idx].prev = 0;
+      nodes[nodes[idx].next].prev = idx;
+      nodes[0].next = idx;
+      LOG(INFO) << "Deallocated node @" << idx;
+    }
+
+    template <typename U>
+    using other = std::allocator<U>;
+
+    std::vector<Node>& nodes;
+  };
+
+  using Set = HashSet<Node, Hasher, Equal, Allocator>;
+  Set nodeSet_;
+
+  const Node* getImp(const K& k) {
+    Node node{
+      .k = k,
+    };
+    auto itr = nodeSet_.find(node);
+    if (itr == nodeSet_.end()) {
+      return nullptr;
+    }
+    const auto idx = &(*itr) - &nodes_[0];
+
+    nodes_[nodes_[idx].prev].next = nodes_[idx].next;
+    nodes_[nodes_[idx].next].prev = nodes_[idx].prev;
+    
+    nodes_[idx].next = tail_;
+    nodes_[idx].prev = nodes_[tail_].prev;
+    nodes_[nodes_[idx].prev].next = idx;
+    nodes_[nodes_[idx].next].prev = idx;
+    return &nodes_[idx];
+  }
+
 };
 
 class LruCacheTest : public testing::Test {
  protected:
   void SetUp() override {}
   void TearDown() override {}
+
+  template <template <typename, typename> typename LruCache>
+  void doTest() {
+    LruCache<int, int> cache(3);
+    EXPECT_EQ(nullptr, cache.get(0));
+    cache.set(0, 0);
+    EXPECT_EQ(0, *cache.get(0));
+    cache.set(0, 1);
+    EXPECT_EQ(1, *cache.get(0));
+
+    cache.set(1, 1);
+    cache.set(2, 2);
+    EXPECT_EQ(1, *cache.get(0));
+    EXPECT_EQ(2, *cache.get(2));
+    EXPECT_EQ(1, *cache.get(1));
+
+    cache.set(3, 3);
+    EXPECT_EQ(nullptr, cache.get(0));
+
+    cache.set(4, 4);
+    EXPECT_EQ(nullptr, cache.get(2));
+  }
 };
 
+template <typename K, typename V>
+using LruCacheWithPointersAndStdUnorderedSet =
+    LruCacheWithPointers<K, V, std::unordered_set>;
+
+template <typename K, typename V>
+using LruCacheWithIndexesAndStdUnorderedSet =
+    LruCacheWithIndexes<K, V, std::unordered_set>;
+
+
 TEST_F(LruCacheTest, Simple) {
-  LruCache<int, int> cache(3);
-  EXPECT_EQ(nullptr, cache.get(0));
-  cache.set(0, 0);
-  EXPECT_EQ(0, *cache.get(0));
-  cache.set(0, 1);
-  EXPECT_EQ(1, *cache.get(0));
-
-  cache.set(1, 1);
-  cache.set(2, 2);
-  EXPECT_EQ(1, *cache.get(0));
-  EXPECT_EQ(2, *cache.get(2));
-  EXPECT_EQ(1, *cache.get(1));
-
-  cache.set(3, 3);
-  EXPECT_EQ(nullptr, cache.get(0));
-
-  cache.set(4, 4);
-  EXPECT_EQ(nullptr, cache.get(2));
-
+  {
+    SCOPED_TRACE("LruCacheWithPointersAndStdUnorderedSet");
+    doTest<LruCacheWithPointersAndStdUnorderedSet>();
+  }
+  {
+    SCOPED_TRACE("LruCacheWithIndexesAndStdUnorderedSet");
+    doTest<LruCacheWithIndexesAndStdUnorderedSet>();
+  }
 }
 
 int main(int argc, char* argv[]) {

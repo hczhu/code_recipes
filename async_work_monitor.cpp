@@ -114,7 +114,7 @@ AsyncWorkId AsyncWorkMonitor::startAsyncWork(const std::string &asynWorkInfo,
   return id;
 }
 
-TEST_F(FooTest, Bar) {
+TEST(FooTest, Bar) {
 }
 
 int main(int argc, char* argv[]) {
