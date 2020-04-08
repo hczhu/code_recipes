@@ -15,6 +15,7 @@
 #include <complex>
 #include <numeric>
 #include <functional>
+#include <unordered_map>
 #include <cassert>
 #include <limits>
 #include <limits.h>
@@ -27,124 +28,133 @@
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 #define flag(x) FLAGS_##x
 
-class Foo {
+int A = 129;
+int B = A + 1;
+int a = B + 1;
+int b = a + 1;
+int d1 = b + 1;
+int d2 = d1 + 1;
+
+#include <array>
+#include <map>
+
+const std::array<int, 6> wilds = {
+  A, B, a, b, d1, d2,  
+};
+
+const int INF = 1000000000;
+struct St {
+  bool lower = false;
+  bool upper = false;
+  bool dig = false;
+  int l = 0;
+  int next = 0;
+  int prev = A;
+  int cur = B;
+};
+
+size_t getKey(const St& st) {
+  size_t ret = st.cur + 128;
+  ret <<= 9; ret ^= st.prev + 128;
+  ret <<=9; ret ^= st.next + 128;
+  ret <<= 9; ret ^= st.l;
+  ret <<= 1; ret ^= st.dig;
+  ret <<= 1; ret ^= st.upper;
+  ret <<= 1; ret ^= st.lower;
+  return ret;
+}
+
+std::unordered_map<size_t, int> mem;
+
+bool goodOne(const St& st) {
+    return st.lower && st.upper && st.dig &&
+        st.l >=6 and st.l <= 20;
+}
+
+St nextSt(const St& st, int ch) {
+    auto nextSt = st;
+    nextSt.lower = st.lower || ('a' <= ch && ch <= 'z') || ch == a || ch == b;
+    nextSt.upper = st.upper || ('A' <= ch && ch <= 'Z') || ch == A || ch == B;
+    nextSt.dig = st.dig || ('0' <= ch && ch <= '9') || ch == d1 || ch == d2;
+    nextSt.l++;
+    nextSt.next++;
+    nextSt.prev = st.cur;
+    nextSt.cur = ch;
+    
+    return nextSt;
+}
+
+using string = std::string;
+class Solution {
 public:
-  Foo() {
-    print();
-  }
-  Foo(const Foo& other) {
-    std::cout << "Copy ctor." << std::endl;
-  }
-  Foo(Foo&& other) {
-    std::cout << "Move ctor." << std::endl;
-  }
-  virtual void print() {
-    std::cout << "Foo" << std::endl;
-  }
-  int& operator[](int idx) {
-    using namespace std;
-     std::cout << "operator[" << idx << "]" << std::endl;
-     return array_[idx];
-  }
-private:
-  std::array<int, 10> array_;
+    int impl(const St& st, const string& s) {
+        const auto key = getKey(st);
+        auto itr = mem.find(key);
+        if (itr != mem.end()) {
+            return itr->second;
+        }
+        
+        if (s.length() == st.next && goodOne(st)) {
+            return 0;
+        }
+        int ret = INF;
+        int op = -1;        
+        if (st.next < s.length()) {
+        // Remove the next cha
+            auto next = st;
+            next.next++;
+            ret = std::min(ret, 1 + impl(next, s));
+        }
+        std::vector<int> chs(wilds.begin(), wilds.end());
+        if (st.next < s.length()) {
+            chs.push_back(s[st.next]);
+        }
+        for (int ch : chs) {
+            if (st.prev == st.cur && st.cur == ch) {
+                continue;
+            }
+            // Insert one
+            if (st.l < 20 ) {
+                auto  next = nextSt(st, ch);
+                next.next--;
+                ret = std::min(ret, 1 + impl(next, s));
+                /*
+              if (ret == impl(next, s) + 1) {
+                op = -ch;
+              }
+              */
+            }
+            // change one
+            if (st.next < s.length() && st.l < 20) {
+                auto  next = nextSt(st, ch);
+                ret = std::min(ret, ((ch == s[st.next])?0:1) + impl(next, s));
+                /*
+              if (ret == ((ch == s[st.next])?0:1) + impl(next, s)) {
+                op = ch;
+              }
+              */
+            }
+        }
+        mem[key] = ret;
+        /*
+        if (ret <= 6) {
+          std::cout << st.l << " " << st.next << " " << st.prev << " " << st.cur  << " "
+           << st.lower << " " << st.upper << " " << st.dig << " = " << ret 
+           << " <== " << op << std::endl;
+        }
+        */
+        return ret;
+
+    }
+    
+    int strongPasswordChecker(string s) {
+        return impl(St(), s);
+    }
 };
-
-class Foo1 : public Foo {
- public:
-  virtual void print() {
-    std::cout << "Foo1" << std::endl;
-  }
-  static void Caller() {
-    Foo1 foo1;
-    foo1.Foo3();
-  }
- private:
-  void Foo3() {}
-};
-
-struct String {
- public:
-  String(const char* a) {
-  }
-};
-
-void overloaded(const std::string& a) {
-  std::cout << a << std::endl;
-}
-
-void overloaded1(const String& a) {
-  // std::cout << a << std::endl;
-}
-
-void overloaded(bool a, int b) {
-  std::cout << "bool: " << a << std::endl;
-}
-
-void FooFun(std::function<void()> fun = []() { std::cout << "haha" << std::endl;})  {
-  fun();
-}
-
-std::string getStr() {
-  return "aaaa";
-}
-
-void FooStr(std::string&& mv) {
-  std::cout << mv << std::endl;
-}
 
 int main() {
-  std::vector<std::string> names{std::string("Hongcheng"), "Lixia"};
-  std::cout << names[0].length() << std::endl;
-  std::for_each(names.begin(), names.end(), std::mem_fn(&std::string::length));
-  Foo foo_1, foo_2, foo_3;
-  auto foos = std::forward_as_tuple(foo_1, foo_2, foo_3);
-  auto foos1 = std::make_tuple(foo_1, foo_2, foo_3);
-  auto foos2 = std::tie(foo_1, foo_2, foo_3);
-  std::vector<Foo> allFoo{foo_1, foo_2, foo_3};
-  std::for_each(allFoo.begin(), allFoo.end(), std::mem_fn(&Foo::print));
-  return 0;
-  FooStr(getStr());
-  auto Nan = std::numeric_limits<double>::quiet_NaN();
-  std::cout << "Nan = " << Nan << std::endl;
-  auto copyNan = 1.0;
-  if ((Nan - copyNan) < 0.0001) {
-    std::cout << "Equal." << std::endl;
-  }
-  std::cout << std::string("\003").length() << std::endl;
-  std::cout << (int)std::string("\003")[0] << std::endl;
-  std::cout << std::string("\\003").length() << std::endl;
-  std::cout << std::string("\\003") << std::endl;
-  auto lam = []() {std::cout << "haha hehe" << std::endl;};
-  auto lam1 = [](int a) {std::cout << "haha hehe" << a << std::endl;};
-  auto lam2 = [](int a) -> int {std::cout << "haha hehe" << a << std::endl; return 1;};
-  std::cout << typeid(lam).name() << std::endl;
-  std::cout << typeid(lam1).name() << std::endl;
-  std::cout << typeid(lam2).name() << std::endl;
-  std::cout << typeid(std::function<void()>).name() << std::endl;
-  FooFun();
-  FooFun([]() {
-    std::cout << "hehe" << std::endl; });
-  std::map<int, int> mapA{
-    {1, 2},
-  };
-  std::map<int, int> mapB{
-    {1, 2},
-  };
-  std::cout << (mapA == mapB) << std::endl;
-  const char* pchar = "afdasf";
-  overloaded(pchar);
-  Foo1 foo1;
-  int a;
-  std::cin >> a;
-  std::cout << (5&1) << std::endl;
-  auto b = a ? 5 : 0 & 1;
-  std::cout << b << std::endl;
-  // decltype(std::min<int>)
-  // std::function<const int&(const int&, const int&)> minMax = 1 ? std::max<int> : std::min<int>;
-  std::vector<Foo> fooVec;
-  fooVec.emplace_back();
-  fooVec.emplace_back();
-  const auto& fooVecRef = fooVec;
+  Solution s;
+  std::cout << s.strongPasswordChecker("hoAISJDBVWD09232UHJEPODKNLADU1") << std::endl;
+  std::cout << mem.size() << std::endl;
   return 0;
 }
