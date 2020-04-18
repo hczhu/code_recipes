@@ -1,1 +1,1 @@
-# cpp-explore
+Code patterns in different languages.
