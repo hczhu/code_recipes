@@ -30,6 +30,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 template<typename T>
@@ -40,58 +41,22 @@ void _displayType(T&& t);
 
 #define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
 
+#define _STR(x) #x
+#define STR(x) _STR(x)
+#define PRINT_MACRO(M) static_assert(0, "Macro " #M " = " STR(M))
+
+// #define x 42
+// PRINT_MACRO(x);
+
 /* template end */
 
-class A {
- public:
-  virtual ~A() = default;
-  virtual int foo() {
-    return 0;
-  }
+class FooTest : public testing::Test {
+ protected:
+  void SetUp() override {}
+  void TearDown() override {}
 };
 
-class B : public A {
- public:
-  int foo() override {
-    return 1;
-  }
-
-  std::vector<std::map<int, int>> bar(int, const std::string&) {
-    return {
-    {
-      {0, 0}
-    }
-    };
-  }
-  std::vector<std::map<int, int>> bar(const std::string&) {
-    return {
-      {
-        {1, 1}
-      }
-    };
-  }
-  template <typename R, typename... Args>
-  using method_ptr_t = std::vector<R> (B::*)(int, const Args&...);
-
-  template <typename R, typename... Args>
-  std::vector<R> forward(method_ptr_t<R, Args...> m, int v, const Args&... args);
-};
-
-template <typename R, typename... Args>
-std::vector<R> B::forward(method_ptr_t<R, Args...> m, int v, const Args&... args) {
-  return (this->*m)(v, args...);
-}
-
-TEST(Foo, Bar) {
-  B b;
-  A* a = &b;
-  using Mptr = int(A::*)();
-  Mptr ptr = &A::foo;
-  LOG(INFO) << "virtual method pointer: " << ptr;
-  VLOG(1) << "virtual method pointer: " << ptr;
-  EXPECT_EQ(1, (a->*ptr)());
-  std::string ss("aa");
-  EXPECT_EQ(1, b.forward(&B::bar, 0, ss)[0].count(0));
+TEST_F(FooTest, Bar) {
 }
 
 int main(int argc, char* argv[]) {
