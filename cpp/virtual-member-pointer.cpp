@@ -88,6 +88,7 @@ TEST(Foo, Bar) {
   using Mptr = int(A::*)();
   Mptr ptr = &A::foo;
   LOG(INFO) << "virtual method pointer: " << ptr;
+  VLOG(1) << "virtual method pointer: " << ptr;
   EXPECT_EQ(1, (a->*ptr)());
   std::string ss("aa");
   EXPECT_EQ(1, b.forward(&B::bar, 0, ss)[0].count(0));
