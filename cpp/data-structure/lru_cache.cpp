@@ -24,25 +24,24 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <valarray>
 #include <vector>
-#include <unordered_set>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-template<typename T>
+template <typename T>
 class _DisplayType;
 
-template<typename T>
+template <typename T>
 void _displayType(T&& t);
 
 #define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
 
 /* template end */
-
 
 template <typename K, typename V>
 class LruCache {
@@ -59,7 +58,8 @@ class LruCache {
 
 template <typename K,
           typename V,
-          template <typename, typename, typename> typename HashSet>
+          template <typename, typename, typename>
+          typename HashSet>
 class LruCacheWithPointers : public LruCache<K, V> {
  public:
   using Super = LruCache<K, V>;
@@ -69,7 +69,7 @@ class LruCacheWithPointers : public LruCache<K, V> {
     tail_.prev = &head_;
   }
 
-  void set(const K &k, const V &v) override {
+  void set(const K& k, const V& v) override {
     if (auto ptr = getImp(k)) {
       ptr->v = v;
       return;
@@ -98,24 +98,24 @@ class LruCacheWithPointers : public LruCache<K, V> {
     K k;
     mutable V v;
     mutable const Node* prev = nullptr;
-    mutable const Node* next = nullptr; 
+    mutable const Node* next = nullptr;
   };
   struct Hasher {
-    size_t operator()(const Node &node) const noexcept {
+    size_t operator()(const Node& node) const noexcept {
       return hasher(node.k);
     }
 
     std::hash<K> hasher;
   };
   struct Equal {
-    bool operator()(const Node &l, const Node &r) const { return l.k == r.k; }
+    bool operator()(const Node& l, const Node& r) const { return l.k == r.k; }
   };
 
   using Set = HashSet<Node, Hasher, Equal>;
 
   const Node* getImp(const K& k) {
     Node node{
-      .k = k,
+        .k = k,
     };
     auto itr = nodes_.find(node);
     if (itr == nodes_.end()) {
@@ -140,7 +140,7 @@ class LruCacheWithPointers : public LruCache<K, V> {
 
   const Node* popTail() {
     auto nodePtr = tail_.prev;
-    nodePtr->prev->next = &tail_;  
+    nodePtr->prev->next = &tail_;
     tail_.prev = nodePtr->prev;
     return nodePtr;
   }
@@ -152,7 +152,8 @@ class LruCacheWithPointers : public LruCache<K, V> {
 
 template <typename K,
           typename V,
-          template <typename, typename, typename, typename> typename HashSet>
+          template <typename, typename, typename, typename>
+          typename HashSet>
 class LruCacheWithIndexes : public LruCache<K, V> {
  public:
   using Super = LruCache<K, V>;
@@ -171,7 +172,7 @@ class LruCacheWithIndexes : public LruCache<K, V> {
     }
   }
 
-  void set(const K &k, const V &v) override {
+  void set(const K& k, const V& v) override {
     if (auto ptr = getImp(k)) {
       ptr->v = v;
       return;
@@ -212,7 +213,7 @@ class LruCacheWithIndexes : public LruCache<K, V> {
     K k;
     mutable V v;
     Idx prev;
-    Idx next; 
+    Idx next;
   };
   std::vector<Node> nodes_;
   const Idx tail_;
@@ -224,7 +225,7 @@ class LruCacheWithIndexes : public LruCache<K, V> {
     std::hash<K> hasher;
   };
   struct Equal {
-    bool operator()(const Node &l, const Node &r) const { return l.k == r.k; }
+    bool operator()(const Node& l, const Node& r) const { return l.k == r.k; }
   };
   struct Allocator : std::allocator<Node> {
     explicit Allocator(std::vector<Node>& nodesArg) : nodes(nodesArg) {
@@ -261,7 +262,7 @@ class LruCacheWithIndexes : public LruCache<K, V> {
 
   const Node* getImp(const K& k) {
     Node node{
-      .k = k,
+        .k = k,
     };
     auto itr = nodeSet_.find(node);
     if (itr == nodeSet_.end()) {
@@ -271,14 +272,13 @@ class LruCacheWithIndexes : public LruCache<K, V> {
 
     nodes_[nodes_[idx].prev].next = nodes_[idx].next;
     nodes_[nodes_[idx].next].prev = nodes_[idx].prev;
-    
+
     nodes_[idx].next = tail_;
     nodes_[idx].prev = nodes_[tail_].prev;
     nodes_[nodes_[idx].prev].next = idx;
     nodes_[nodes_[idx].next].prev = idx;
     return &nodes_[idx];
   }
-
 };
 
 class LruCacheTest : public testing::Test {
@@ -318,6 +318,101 @@ using LruCacheWithIndexesAndStdUnorderedSet =
     LruCacheWithIndexes<K, V, std::unordered_set>;
 
 
+#include <list>
+
+template <typename K, typename V>
+class LruCacheList {
+ public:
+  using Super = LruCache<K, V>;
+  
+  LruCacheList(size_t maxNumItems) : maxNumItems_(maxNumItems) {
+  }
+
+  void printList(const std::string& header) const {
+    std::cout << header;
+    for (auto itr = recencyList_.begin(); itr != recencyList_.end(); ++itr) {
+      std::cout << " " << *itr;
+    }
+    std::cout << std::endl;
+  }
+
+  void set(const K& k, const V& v) {
+    auto itr = k2Node_.find(k);
+    if (itr != k2Node_.end()) {
+      itr->second.v = v;
+      recencyList_.splice(recencyList_.begin(), recencyList_, itr->second.itr);
+      return;
+    }
+
+    if (k2Node_.size() == maxNumItems_) {
+      const auto& keyToEvict = *recencyList_.rbegin();
+      LOG(INFO) << "Evicting " << keyToEvict;
+      const auto numErased = k2Node_.erase(keyToEvict);
+      CHECK_EQ(1, numErased);
+      recencyList_.pop_back();
+    }
+
+    recencyList_.insert(recencyList_.begin(), k);
+    Node node{
+      .v = v,
+      .itr = recencyList_.begin(),
+    };
+    k2Node_.emplace(k, node);
+    printList("set()");
+  }
+  
+  const V* get(const K& k) {
+    auto itr = k2Node_.find(k);
+    if (itr == k2Node_.end()) {
+      return nullptr;
+    }
+    const Node& node = itr->second;
+    recencyList_.splice(recencyList_.begin(), recencyList_, node.itr);
+    printList("get()");
+    return &node.v;
+  }
+
+ private:
+  const size_t maxNumItems_;
+  // .begin() is the most recently accessed key.
+  std::list<K> recencyList_;
+
+  struct Node {
+    V v;
+    // refer to the element in the 'recencyList_'
+    const typename decltype(recencyList_)::const_iterator itr; 
+  };
+
+  std::unordered_map<K, Node> k2Node_;
+
+
+};
+
+TEST(stlList, Simple) {
+  std::list<int> l = {
+    1, 2, 3, 4
+  };
+  auto it = l.begin();
+  l.splice(l.begin(), l, it);
+  EXPECT_EQ(1, *it);
+  ++it;
+  EXPECT_EQ(2, *it);
+
+  l.splice(l.begin(), l, it);
+  EXPECT_EQ(2, *it);
+  ++it;
+  EXPECT_EQ(1, *it);
+
+  {
+    std::list<int> l = {1,};
+    auto it = l.begin();
+    l.splice(l.begin(), l ,it);
+    EXPECT_EQ(1, *it);
+    ++it;
+    EXPECT_EQ(l.end(), it);
+  }
+}
+
 TEST_F(LruCacheTest, Simple) {
   {
     SCOPED_TRACE("LruCacheWithPointersAndStdUnorderedSet");
@@ -325,9 +420,16 @@ TEST_F(LruCacheTest, Simple) {
   }
   {
     SCOPED_TRACE("LruCacheWithIndexesAndStdUnorderedSet");
-     // doTest<LruCacheWithIndexesAndStdUnorderedSet>();
+    // doTest<LruCacheWithIndexesAndStdUnorderedSet>();
+  }
+
+  {
+    SCOPED_TRACE("LruCacheList");
+    doTest<LruCacheList>();
   }
 }
+
+
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
@@ -335,4 +437,3 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   return RUN_ALL_TESTS();
 }
-
