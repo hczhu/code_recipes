@@ -337,13 +337,10 @@ class LruCacheList {
   }
 
   void set(const K& k, const V& v) {
-    auto itr = k2Node_.find(k);
-    if (itr != k2Node_.end()) {
-      itr->second.v = v;
-      recencyList_.splice(recencyList_.begin(), recencyList_, itr->second.itr);
+    if (auto vPtr = get(k)) {
+      *vPtr = v;
       return;
     }
-
     if (k2Node_.size() == maxNumItems_) {
       const auto& keyToEvict = *recencyList_.rbegin();
       LOG(INFO) << "Evicting " << keyToEvict;
@@ -361,12 +358,12 @@ class LruCacheList {
     printList("set()");
   }
   
-  const V* get(const K& k) {
+  V* get(const K& k) {
     auto itr = k2Node_.find(k);
     if (itr == k2Node_.end()) {
       return nullptr;
     }
-    const Node& node = itr->second;
+    auto& node = itr->second;
     recencyList_.splice(recencyList_.begin(), recencyList_, node.itr);
     printList("get()");
     return &node.v;
