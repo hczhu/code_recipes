@@ -65,6 +65,8 @@ TEST_F(CaptureByValueTrap, Basic) {
   EXPECT_EQ(1, f());
   EXPECT_EQ(2, f());
   EXPECT_EQ(3, f());
+
+  EXPECT_EQ(0, v);
 }
 
 int main(int argc, char* argv[]) {
