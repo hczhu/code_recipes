@@ -143,22 +143,30 @@ public:
     BookMyShow(int n, int m) : m_(m), tree_(n) {
         
     }
-    
+
+    bool filterOutSeg(const Seats& seg, size_t l, size_t r, size_t maxR){
+        if (seg.minOccupied == m_) {
+          return true;
+        }
+        if (maxR <= l) {
+          // Not overlap
+          return true;
+        }
+        return false;
+    }
+
     std::vector<int> gather(int k, int maxRow) {
       int row = -1, col = -1;
+      size_t maxR = maxRow + 1;
       SegmentTree<Seats>::Callback canGather = [&, this](Seats &seg, size_t l,
                                                    size_t r) -> bool {
         // std::cout << "[" << l << ", " << r << ") = " << seg.minOccupied << " @" << (&seg - &tree_.segs_[0]) << std::endl;
 
-        if (seg.minOccupied == m_) {
-          return false;
-        }
         if (row >= 0) {
           // Already found a row
           return false;
         }
-        if (maxRow < l) {
-          // Not overlap
+        if (filterOutSeg(seg, l, r, maxR)) {
           return false;
         }
         if (seg.minOccupied + k > m_) {
@@ -192,15 +200,10 @@ public:
 
         // std::cout << "[" << l << ", " << r << ") = " << seg.sumOccupied << std::endl;
 
-        if (seg.minOccupied == m_) {
-          // Fully occupied.
-          return false;
-        }
         if (neededSeats == 0) {
           return false;
         }
-
-        if (maxr <= l) {
+        if (filterOutSeg(seg, l, r, maxr)) {
           return false;
         }
 
