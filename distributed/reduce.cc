@@ -76,7 +76,58 @@ struct MsgHash {
 };
 using MsgSet = std::unordered_set<Msg, MsgHash>;
 
-int binaryTreeReduce(std::vector<int>& values, MsgSet& rec, MsgSet& sent) {
+struct Fence {
+  std::unordered_map<int, int> round2count;
+  std::mutex m;
+  std::condition_variable cv;
+
+  void waitFor(int round, int count) {
+    std::unique_lock<std::mutex> lk(m);
+    ++round2count[round];
+    if (round2count[round] == count) {
+      cv.notify_all();
+    } else {
+      cv.wait(lk,
+              [this, round, count]() { return round2count[round] == count; });
+    }
+  }
+};
+
+void binaryTreeTreadRun(size_t threadId, std::vector<int> &values,
+                        Fence &fence) {
+  LOG(INFO) << "Running thread #" << threadId;
+  const auto n = values.size();
+  bool shouldEnd = false;
+  for (size_t r = 1; r < n && !shouldEnd; r <<= 1) {
+    const auto participants = (n + r - 1) / r;
+    const auto rr = r << 1;
+    if (threadId % rr) {
+      size_t destThreadId = threadId - (threadId % rr);
+      LOG(INFO) << "Node #" << threadId << " sent a msg to node #" << destThreadId << " at round #" << r;
+      values[destThreadId] += values[threadId];
+      shouldEnd = true;
+    }
+    LOG(INFO) << "Node #" << threadId << " is waiting for round #" << r
+              << " to finish expecting " << participants << " participants.";
+    fence.waitFor(r, participants);
+  }
+  LOG(INFO) << "Node #" << threadId << " is done.";
+}
+
+int binaryTreeReduce(std::vector<int> &values) {
+  LOG(INFO) << "----------- Running " << values.size() << " theads -----------";
+  std::vector<std::thread> threads;
+  Fence fence;
+  for (size_t i = 0; i < values.size(); ++i) {
+    threads.emplace_back([&, i]() { binaryTreeTreadRun(i, values, fence); });
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  return values[0];
+}
+
+int simulateBinaryTreeReduce(std::vector<int>& values) {
   const auto n = values.size();
   for (size_t r = 1; r < n; r <<= 1) {
     LOG(INFO) << "---- Round #" << r << " ----------"; 
@@ -89,30 +140,40 @@ int binaryTreeReduce(std::vector<int>& values, MsgSet& rec, MsgSet& sent) {
   return values[0];
 }
 
-TEST(Reduce, bianryTreeReduceTest) {
+TEST(Reduce, bianryTreeReduceSimulationTest) {
   auto testN = [](size_t n) {
-    MsgSet recieved, sent;
-
     std::vector<int> values(n);
     for (size_t i = 0; i < n; ++i) {
       values[i] = i;
     }
     const auto ans = std::accumulate(values.begin(), values.end(), 0);
 
-    EXPECT_EQ(binaryTreeReduce(values, recieved, sent), ans);
-
-    EXPECT_EQ(recieved.size(), sent.size());
-    for (const auto &pr : recieved) {
-      EXPECT_EQ(1, sent.count(pr));
-    }
+    EXPECT_EQ(simulateBinaryTreeReduce(values), ans);
   };
 
   SCOPED_TRACE("test 2"); testN(2);
   SCOPED_TRACE("test 9"); testN(9);
   SCOPED_TRACE("test 1"); testN(1);
   SCOPED_TRACE("test 101"); testN(101);
+}
 
+TEST(Reduce, bianryTreeReduceTest) {
+  auto testN = [](size_t n) {
+    std::vector<int> values(n);
+    for (size_t i = 0; i < n; ++i) {
+      values[i] = i;
+    }
+    const auto ans = std::accumulate(values.begin(), values.end(), 0);
 
+    EXPECT_EQ(binaryTreeReduce(values), ans);
+  };
+
+  SCOPED_TRACE("test 1"); testN(1);
+  SCOPED_TRACE("test 2"); testN(2);
+  SCOPED_TRACE("test 9"); testN(9);
+  SCOPED_TRACE("test 1"); testN(1);
+  SCOPED_TRACE("test 101"); testN(101);
+  SCOPED_TRACE("test 1017"); testN(1017);
 }
 
 int main(int argc, char* argv[]) {
