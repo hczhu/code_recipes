@@ -34,6 +34,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "message_queue.h"
+
 template<typename T>
 class _DisplayType;
 
@@ -95,7 +97,7 @@ struct Fence {
 
 void binaryTreeTreadRun(size_t threadId, std::vector<int> &values,
                         Fence &fence) {
-  LOG(INFO) << "Running thread #" << threadId;
+  // LOG(INFO) << "Running thread #" << threadId;
   const auto n = values.size();
   bool shouldEnd = false;
   for (size_t r = 1; r < n && !shouldEnd; r <<= 1) {
@@ -103,23 +105,61 @@ void binaryTreeTreadRun(size_t threadId, std::vector<int> &values,
     const auto rr = r << 1;
     if (threadId % rr) {
       size_t destThreadId = threadId - (threadId % rr);
-      LOG(INFO) << "Node #" << threadId << " sent a msg to node #" << destThreadId << " at round #" << r;
+      // LOG(INFO) << "Node #" << threadId << " sent a msg to node #" << destThreadId << " at round #" << r;
       values[destThreadId] += values[threadId];
       shouldEnd = true;
     }
-    LOG(INFO) << "Node #" << threadId << " is waiting for round #" << r
-              << " to finish expecting " << participants << " participants.";
+    // LOG(INFO) << "Node #" << threadId << " is waiting for round #" << r
+              // << " to finish expecting " << participants << " participants.";
     fence.waitFor(r, participants);
   }
-  LOG(INFO) << "Node #" << threadId << " is done.";
+  // LOG(INFO) << "Node #" << threadId << " is done.";
 }
 
-int binaryTreeReduce(std::vector<int> &values) {
+struct Message {
+  int v;
+  size_t from;
+};
+
+void binaryTreeTreadRunWithMsg(size_t threadId, size_t n, int &value,
+                               MessageQueue<Message> &mq) {
+  //LOG(INFO) << "Running thread #" << threadId;
+  for (size_t r = 1; r < n; r <<= 1) {
+    const auto rr = r << 1;
+    if (threadId % rr) {
+      size_t destThreadId = threadId - (threadId % rr);
+      mq.sendTo(destThreadId, Message{
+                                  .v = value,
+                                  .from = threadId,
+                              });
+      // LOG(INFO) << "Node #" << threadId << " sent a msg to node #"
+                // << destThreadId << " at round #" << r;
+      break;
+    }
+    if (threadId + r < n) {
+      // LOG(INFO) << "Node #" << threadId << " is waiting for a msg";
+      auto msg = mq.receive(threadId);
+      // LOG(INFO) << "Node #" << threadId << " received a msg from node #"
+                // << msg.from;
+      value += msg.v;
+    }
+  }
+  // LOG(INFO) << "Node #" << threadId << " is done.";
+}
+
+int binaryTreeReduce(std::vector<int> &values, bool withMq = false) {
   LOG(INFO) << "----------- Running " << values.size() << " theads -----------";
   std::vector<std::thread> threads;
   Fence fence;
+  MessageQueue<Message> mq;
   for (size_t i = 0; i < values.size(); ++i) {
-    threads.emplace_back([&, i]() { binaryTreeTreadRun(i, values, fence); });
+    threads.emplace_back([&, i]() { 
+      if (withMq) {
+        binaryTreeTreadRunWithMsg(i, values.size(), values[i], mq);
+      } else {
+        binaryTreeTreadRun(i, values, fence);
+      }
+    });
   }
   for (auto& thread : threads) {
     thread.join();
@@ -130,11 +170,11 @@ int binaryTreeReduce(std::vector<int> &values) {
 int simulateBinaryTreeReduce(std::vector<int>& values) {
   const auto n = values.size();
   for (size_t r = 1; r < n; r <<= 1) {
-    LOG(INFO) << "---- Round #" << r << " ----------"; 
+    // LOG(INFO) << "---- Round #" << r << " ----------"; 
     const auto rr = r << 1;
     for (size_t i = 0; i + r < n; i += rr) {
       values[i] += values[i + r];
-      LOG(INFO) << "Node #" << (i + r) << " sent a msg to node #" << i;
+      // LOG(INFO) << "Node #" << (i + r) << " sent a msg to node #" << i;
     }
   }
   return values[0];
@@ -166,6 +206,25 @@ TEST(Reduce, bianryTreeReduceTest) {
     const auto ans = std::accumulate(values.begin(), values.end(), 0);
 
     EXPECT_EQ(binaryTreeReduce(values), ans);
+  };
+
+  SCOPED_TRACE("test 1"); testN(1);
+  SCOPED_TRACE("test 2"); testN(2);
+  SCOPED_TRACE("test 9"); testN(9);
+  SCOPED_TRACE("test 1"); testN(1);
+  SCOPED_TRACE("test 101"); testN(101);
+  SCOPED_TRACE("test 1017"); testN(1017);
+}
+
+TEST(Reduce, bianryTreeReduceWithMsgTest) {
+  auto testN = [](size_t n) {
+    std::vector<int> values(n);
+    for (size_t i = 0; i < n; ++i) {
+      values[i] = i;
+    }
+    const auto ans = std::accumulate(values.begin(), values.end(), 0);
+
+    EXPECT_EQ(binaryTreeReduce(values, true), ans);
   };
 
   SCOPED_TRACE("test 1"); testN(1);
