@@ -142,6 +142,20 @@ class FenwickTree {
   std::vector<Segment> segs_;
 };
 
+
+// Supports Range Minimum Queries (RMQ)
+template<typename Seg, typename Comp>
+class RMQ {
+ public:
+  RMQ(size_t n) : tree_(n), comp() { }
+   
+
+ private:
+  FenwickTree<Seg> tree_;
+  Comp comp_;
+};
+
+
 class SegmentTreeTest : public testing::Test {
  protected:
   void SetUp() override {}
