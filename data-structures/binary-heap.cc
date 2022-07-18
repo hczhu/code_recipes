@@ -60,7 +60,15 @@ public:
 
   BinaryHeap(Cmp &&cmpLess, const std::vector<size_t> &keys)
       : BinaryHeap(keys.size(), std::move(cmpLess)) {
-        // TODO: implement heapifying an array
+    // TODO: implement heapifying an array
+    for (size_t i = 0; i < keys.size(); ++i) {
+      heap_[i] = keys[i];
+      hpos_[heap_[i]] = i;
+    }
+    hs_ = heap_.size();
+    for (int i = int(hs_) - 1; i >= 0; --i) {
+      adjustDown(heap_[i]);
+    }
   }
 
   void adjustUp(size_t key) & {
@@ -193,8 +201,25 @@ TEST(HeapTest, Basic) {
   EXPECT_EQ(heap.pop(), 1);
   
   EXPECT_EQ(0, heap.size());
-
 }
+
+TEST(HeapTest, Heapify) {
+  std::vector<int> values = {
+    0, 1 ,2, 3, 4, 5, 6
+  };
+  BinaryHeap<Cmp> heap(Cmp(values), std::vector<size_t>({
+    0, 2, 3, 5, 6, 
+  }));
+
+  EXPECT_EQ(heap.pop(), 6);
+  EXPECT_EQ(heap.pop(), 5);
+  EXPECT_EQ(heap.pop(), 3);
+  EXPECT_EQ(heap.pop(), 2);
+  EXPECT_EQ(heap.pop(), 0);
+
+  EXPECT_EQ(0, heap.size());
+}
+
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
