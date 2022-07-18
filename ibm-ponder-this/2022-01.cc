@@ -9,25 +9,19 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-template<typename T>
-class _DisplayType;
+template <typename T> class _DisplayType;
 
-template<typename T>
-void _displayType(T&& t);
+template <typename T> void _displayType(T &&t);
 
 #define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
 
-#define BT(n) (1<<(n))
+#define BT(n) (1 << (n))
 
-template<int P, int B>
-struct Pow {
+template <int P, int B> struct Pow {
   static constexpr uint64_t v = Pow<P - 1, B>::v * B;
 };
 
-template<int B>
-struct Pow<0, B> {
-  static constexpr uint64_t v = 1;
-};
+template <int B> struct Pow<0, B> { static constexpr uint64_t v = 1; };
 
 constexpr int N = 8;
 constexpr int D = 6;
@@ -35,13 +29,11 @@ constexpr int W = 10;
 constexpr int P = Pow<D, W>::v;
 
 // See: https://www.ibm.com/docs/en/zos/2.4.0?topic=only-variadic-templates-c11
-template<unsigned head, unsigned... tails>
-struct BitMask {
+template <unsigned head, unsigned... tails> struct BitMask {
   static constexpr uint64_t v = (uint64_t(1) << (head)) | BitMask<tails...>::v;
 };
 
-template<unsigned head>
-struct BitMask<head> {
+template <unsigned head> struct BitMask<head> {
   static constexpr uint64_t v = (uint64_t(1) << (head));
 };
 
@@ -52,7 +44,7 @@ int bitMaskToEdgeCnt[BT(W)][W][W];
 
 using IntPair = std::pair<int, int>;
 
-int numToBitMask(int num, std::vector<IntPair>& ip) {
+int numToBitMask(int num, std::vector<IntPair> &ip) {
   int ret = 0;
   int prevDigit = -1;
   ip.clear();
@@ -72,7 +64,6 @@ int numToBitMask(int num, std::vector<IntPair>& ip) {
   }
   return ret;
 }
-
 
 void initPrimeNumberTable(int d) {
   LOG(INFO) << "Initing the prime number table.";
@@ -101,13 +92,13 @@ void initPrimeNumberTable(int d) {
       if (ip.size() + 1 != d) {
         continue;
       }
-      ++primeCnt; 
-      int m = (((1<<W) - 1) ^ bm);
+      ++primeCnt;
+      int m = (((1 << W) - 1) ^ bm);
       int sm = m;
       do {
         auto bitMask = bitMaskToEdgeCnt[sm ^ bm];
         sm = (sm - 1) & m;
-        for (auto&& [prev, next] : ip) {
+        for (auto &&[prev, next] : ip) {
           CHECK_NE(prev, next);
           ++bitMask[prev][next];
           ++bitMask[next][prev];
@@ -121,11 +112,11 @@ void initPrimeNumberTable(int d) {
             << " prime numbers and " << edgeCnt << " edges.";
 }
 
-int scoreCircle(const std::vector<int>& circle, int d) {
+int scoreCircle(const std::vector<int> &circle, int d) {
   const int n = circle.size();
   int bm = 0;
   for (auto d : circle) {
-    bm ^= (1<<d);
+    bm ^= (1 << d);
   }
   auto edgeCnt = bitMaskToEdgeCnt[bm];
   int ret = 0;
@@ -143,7 +134,8 @@ std::vector<int> minCircle;
 int maxScore = -1;
 std::vector<int> maxCircle;
 
-void doSearch(int n, int circle[], int p, int bm, int score, const int edgeCnt[][W]) {
+void doSearch(int n, int circle[], int p, int bm, int score,
+              const int edgeCnt[][W]) {
   if (bm == 0) {
     CHECK_EQ(n, p);
     if (score < minScore) {
@@ -160,22 +152,23 @@ void doSearch(int n, int circle[], int p, int bm, int score, const int edgeCnt[]
   }
 
   for (int d = 0; d < W; ++d) {
-    if (((1<<d) & bm) == 0) {
+    if (((1 << d) & bm) == 0) {
       continue;
     }
     circle[p] = d;
     int addedScore = 0;
     for (int i = 0; i < p; ++i) {
-      addedScore += edgeCnt[circle[i]][circle[p]] * std::min(p - i, n - (p - i));
+      addedScore +=
+          edgeCnt[circle[i]][circle[p]] * std::min(p - i, n - (p - i));
     }
-    doSearch(n, circle, p + 1, bm ^ (1<<d), addedScore + score, edgeCnt);
+    doSearch(n, circle, p + 1, bm ^ (1 << d), addedScore + score, edgeCnt);
   }
 }
 
 void solve(int n, int d) {
   initPrimeNumberTable(d);
   std::vector<int> goodMb;
-  for (int mb = 1; mb < (1<<W); ++mb) {
+  for (int mb = 1; mb < (1 << W); ++mb) {
     if (__builtin_popcount(mb) == n) {
       goodMb.push_back(mb);
     }
@@ -189,10 +182,9 @@ void solve(int n, int d) {
     // LOG(INFO) << "Searching for selection bits: " << mb;
     int circle[N];
     circle[0] = __builtin_ffs(mb) - 1;
-    doSearch(n, circle, 1, mb ^ (1<<circle[0]), 0, bitMaskToEdgeCnt[mb]);
+    doSearch(n, circle, 1, mb ^ (1 << circle[0]), 0, bitMaskToEdgeCnt[mb]);
   }
 }
-
 
 TEST(ScoringTest, Basic) {
   EXPECT_EQ(sizeof bitMaskToEdgeCnt,
@@ -208,9 +200,29 @@ TEST(ScoringTest, Basic) {
   EXPECT_EQ(BM(2, 4, 1, 0, 3), bm);
   EXPECT_EQ(4, ip.size());
 
-  EXPECT_EQ(1882, scoreCircle( { 4, 7, 3, 6, 2, 0, 1, }, 5));
+  EXPECT_EQ(1882, scoreCircle(
+                      {
+                          4,
+                          7,
+                          3,
+                          6,
+                          2,
+                          0,
+                          1,
+                      },
+                      5));
 
-  EXPECT_EQ(446, scoreCircle({0, 1, 4, 5, 8, 2, 6, }, 5));
+  EXPECT_EQ(446, scoreCircle(
+                     {
+                         0,
+                         1,
+                         4,
+                         5,
+                         8,
+                         2,
+                         6,
+                     },
+                     5));
   EXPECT_EQ(3051, scoreCircle({1, 2, 5, 4, 9, 3, 7}, 5));
 
   solve(3, 2);
@@ -221,7 +233,7 @@ TEST(ScoringTest, Basic) {
   EXPECT_EQ(3, maxCircle.size());
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
@@ -238,7 +250,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Min score: " << minScore << " with circle: [";
     std::ranges::copy(minCircle, std::ostream_iterator<int>(std::cout, ", "));
     std::cout << "]" << std::endl;
-
   };
   solveOne(7, 5);
   solveOne(8, 6);
