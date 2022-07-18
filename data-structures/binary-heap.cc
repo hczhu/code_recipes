@@ -58,6 +58,11 @@ public:
   BinaryHeap(size_t cap, Cmp &&cmpLess)
       : heap_(cap), hpos_(cap), hs_(0), cmpLess_(std::move(cmpLess)) {}
 
+  BinaryHeap(Cmp &&cmpLess, const std::vector<size_t> &keys)
+      : BinaryHeap(keys.size(), std::move(cmpLess)) {
+        // TODO: implement heapifying an array
+  }
+
   void adjustUp(size_t key) & {
     auto pos = hpos_[key];
     LOG(INFO) << "----- Adjusting key up " << key << " @" << pos << " ----";
