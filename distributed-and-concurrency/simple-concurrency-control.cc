@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -50,22 +49,15 @@ void _displayType(T&& t);
 
 /* template end */
 
-class FooTest : public testing::Test {
- protected:
-  void SetUp() override {}
-  void TearDown() override {}
-};
-
 // https://en.cppreference.com/w/cpp/thread
-
 #include <latch>
 #include <functional>
 
 using namespace std;
 
-class Foo {
+class OrderedSync {
 public:
-  Foo(bool use_atomic = false) : use_atomic_(use_atomic), l1(1), l2(1) {
+  OrderedSync(bool use_atomic = false) : use_atomic_(use_atomic), l1(1), l2(1) {
     LOG(INFO) << "Initial value: " << st;
   }
 
@@ -115,8 +107,8 @@ public:
   std::atomic<int> st {0};
 };
 
-TEST_F(FooTest, Bar) {
-  auto oneTest = [](Foo &foo) {
+TEST(OrderedSyncTest, Simple) {
+  auto oneTest = [](OrderedSync &foo) {
     std::mutex mt;
     std::vector<int> output;
     auto getFn = [&](int v) {
@@ -139,14 +131,73 @@ TEST_F(FooTest, Bar) {
   };
 
   {
-    Foo foo;
+    OrderedSync foo;
     oneTest(foo);
   }
   {
-    Foo foo(true);
+    OrderedSync foo(true);
     oneTest(foo);
   }
 }
+
+// Threads will be allowed to hold the lock in the oder of their ids from
+// smallest to the largest one repeatedly.
+class QueueSync {
+ public:
+  // Thread id should be in [0, n - 1).
+  QueueSync(size_t n) : n_(n) { }
+
+  void run(size_t id, std::function<void()> &&fn) {
+    LOG(INFO) << "Running id: " << id;
+    std::unique_lock<std::mutex> lg(m_);
+    cv_.wait(lg, [this, id] { return nextId_ == id; });
+    fn();
+    nextId_ = (nextId_ + 1) % n_;
+    cv_.notify_all();
+    LOG(INFO) << "Finished running id: " << id << " next: " << nextId_;
+  }
+
+ private:
+  std::mutex m_;
+  std::condition_variable cv_;
+  size_t nextId_ = 0;
+  const size_t n_;
+};
+
+TEST(QueueSyncTest, basic) {
+  std::vector<std::thread> threads;
+  size_t n = 4;
+  std::vector<int> output;
+  QueueSync qs(n);
+  for (size_t id = 0; id < n; ++id) {
+    threads.emplace_back([&, n, id] {
+      for (int j = 0; j < 3; ++j) {
+        qs.run(id, [&, n, j, id] { output.push_back(j * n + id); });
+      }
+    });
+  }
+
+  for (auto& thr : threads) {
+    thr.join();
+  }
+
+  EXPECT_EQ(output, std::vector<int>({
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                    }));
+}
+
+
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
