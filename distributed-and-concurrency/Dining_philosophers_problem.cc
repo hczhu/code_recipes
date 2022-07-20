@@ -77,9 +77,10 @@ class BinarySemaphore {
      std::unique_lock lg(m_);
      if (v_ == 1) {
        v_ = 0;
-     } else {
-       cv_.wait(lg, [this] { return v_ == 1; });
+       return;
      }
+     cv_.wait(lg, [this] { return v_ == 1; });
+     v_ = 0;
    }
 
  private:
@@ -102,6 +103,31 @@ TEST(BinarySemaphoreTest, Basic) {
   EXPECT_EQ(3, v);
 }
 
+TEST(BinarySemaphoreTest, Threads) {
+  BinarySemaphore bs(1);
+  std::atomic<size_t> threadsInCriticalSection{0};
+  std::vector<std::thread> threads;
+  std::mt19937 rnd(std::time(nullptr));
+  std::uniform_int_distribution<size_t> dist(0, 60);
+  for (int i = 0; i < 10; ++i) {
+    threads.emplace_back([&] {
+      for (int j = 0; j < 10; ++j) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(60 + dist(rnd)));
+        bs.acquire();
+        ++threadsInCriticalSection;
+        CHECK_EQ(1, threadsInCriticalSection);
+        std::this_thread::sleep_for(std::chrono::milliseconds(60 + dist(rnd)));
+        --threadsInCriticalSection;
+        bs.release();
+      }
+    });
+  }
+
+  for (auto& thr : threads) {
+    thr.join();
+  }
+}
+
 class PhilosophersSync {
  public:
   enum class State {
@@ -121,22 +147,28 @@ class PhilosophersSync {
     return std::unique_lock<std::mutex>(m_);
   }
 
-  void takeForks(size_t pid) & {
+  void takeForks(size_t pid, std::function<void(size_t)> &cb,
+                 std::function<void(size_t, size_t)> &releaseCb) & {
     {
       std::lock_guard<std::mutex> lg(m_);
       states_[pid] = State::HUNGRY;
-      tryToEat(pid);
+      tryToEat(pid, [&] { releaseCb(pid, pid); });
     }
     // May be blocked here until both left and right philosophers yield by
     // calling sems_[pid].release() in 'tryToEat(pid)' on behalf of 'pid'.
     sems_[pid]->acquire();
+    cb(pid);
   }
 
-  void putForks(size_t pid) & {
+  void putForks(size_t pid, std::function<void(size_t)> &cb,
+                std::function<void(size_t, size_t)> &releaseCb) & {
     std::lock_guard<std::mutex> lg(m_);
     states_[pid] = State::THINKING;
-    tryToEat((pid + 1) % numPhils_);
-    tryToEat((pid + numPhils_ - 1) % numPhils_);
+    cb(pid);
+    tryToEat((pid + 1) % numPhils_,
+             [&, this] { releaseCb((pid + 1) % numPhils_, pid); });
+    tryToEat((pid + numPhils_ - 1) % numPhils_,
+             [&, this] { releaseCb((pid + numPhils_ - 1) % numPhils_, pid); });
   }
 
   std::vector<State> getStates() const {
@@ -156,17 +188,19 @@ class PhilosophersSync {
 
   // The caller must be holding 'm_'.
   // It's a non-blocking API.
-  void tryToEat(size_t pid) & {
-    if (states_[pid] == State::HUNGRY
-        && states_[(pid + numPhils_ - 1) % numPhils_] != State::EATING
-        && states_[(pid + 1) % numPhils_] != State::EATING) {
+  void tryToEat(size_t pid, std::function<void()> &&cb) & {
+    if (states_[pid] == State::HUNGRY &&
+        states_[(pid + numPhils_ - 1) % numPhils_] != State::EATING &&
+        states_[(pid + 1) % numPhils_] != State::EATING) {
       states_[pid] = State::EATING;
       // The beauty of this algorithm such that another philosopher can release
       // the semaphore for 'pid' and starvation can be avoided by design.
       sems_[pid]->release();
+      if (cb) {
+        cb();
+      }
     }
   }
-
 };
 
 TEST(DiningPhilosophersTest, Basic) {
@@ -184,10 +218,52 @@ TEST(DiningPhilosophersTest, Basic) {
       10, // Super slow
       1,
   };
+  const size_t n = 5;
   const size_t runTimeSec = 5;
+  std::mutex m;
+  using P = std::pair<size_t, size_t>;
+  std::vector<P> seq;
+  std::function<void(size_t)> takeForks = [&](size_t pid) {
+    std::lock_guard lg(m);
+    seq.push_back(P(pid + 1, 0));
+  };
+  std::function<void(size_t)> putForks = [&](size_t pid) {
+    std::lock_guard lg(m);
+    seq.push_back(P(0, pid + 1));
+  };
+
+  std::function<void(size_t, size_t)> release = [&](size_t pid,
+                                                    size_t callerPid) {
+    std::lock_guard lg(m);
+    seq.push_back(P(pid + 1, callerPid + 1));
+  };
+
+  auto checkActions = [&] {
+    std::vector<bool> forksInUse(5, false);
+    for (auto pr : seq) {
+      auto p1 = pr.first;
+      auto p2 = pr.second;
+      if (p2 == 0) {
+        int l = p1 -1;
+        int r = (l + 1) % n;
+        // std::cout << "#" << (p1 - 1) << " picked up forks " << l << " and " << r << std::endl;
+        CHECK(!forksInUse[l]);
+        CHECK(!forksInUse[r]);
+        forksInUse[l] = forksInUse[r] = true;
+      } else if (p1 == 0) {
+        int l = p2 - 1;
+        int r = (l + 1) % n;
+        // std::cout << "#" << (p2 - 1) << " put forks " << l << " and " << r << std::endl;
+        CHECK(forksInUse[l]);
+        CHECK(forksInUse[r]);
+        forksInUse[l] = forksInUse[r] = false;
+      } else {
+        // std::cout << "#" << (p2 - 1) << " released " << "#" << (p1 - 1) << std::endl;
+      }
+    }
+  };
 
   auto runTest = [&] {
-    const size_t n = 5;
     PhilosophersSync ps(n);
 
     std::mt19937 rnd(std::time(nullptr));
@@ -204,10 +280,10 @@ TEST(DiningPhilosophersTest, Basic) {
       while (getEpoch() < startEpoch + runTimeSec) {
         std::this_thread::sleep_for(
             std::chrono::milliseconds(thinkingTime + dist(rnd)));
-        ps.takeForks(pid);
+        ps.takeForks(pid, takeForks, release);
         std::this_thread::sleep_for(
             std::chrono::milliseconds(eatingTime + dist(rnd)));
-        ps.putForks(pid);
+        ps.putForks(pid, putForks, release);
         ++r;
         // LOG(INFO) << "#" << pid << " finished round #" << r << " @"
                   // << getEpoch();
@@ -225,7 +301,7 @@ TEST(DiningPhilosophersTest, Basic) {
     }
 
     while (numPhilDone > 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(23));
+      std::this_thread::sleep_for(std::chrono::milliseconds(3));
       const auto st = ps.getStates();
       for (size_t pid = 0; pid < n; ++pid) {
         if (st[pid] == PhilosophersSync::State::EATING) {
@@ -243,12 +319,16 @@ TEST(DiningPhilosophersTest, Basic) {
       LOG(INFO) << "Philosopher #" << pid << " ate " << howManyTimesEating[pid]
                 << " times.";
     }
+
+    LOG(INFO) << "There are " << seq.size() << " actions.";
+    checkActions();
   };
 
   SCOPED_TRACE("5 philosophers");
   runTest();
 
   SCOPED_TRACE("2 philosophers");
+  seq.clear();
   thinkingTime[1] = thinkingTime[2] = thinkingTime[4] = runTimeSec * 1000 + 200;
   runTest();
 }
