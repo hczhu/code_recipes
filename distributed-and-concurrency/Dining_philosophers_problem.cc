@@ -170,75 +170,87 @@ class PhilosophersSync {
 };
 
 TEST(DiningPhilosophersTest, Basic) {
-  const size_t n = 5;
-  PhilosophersSync ps(n);
-
-  std::mt19937 rnd(std::time(nullptr));
-  std::uniform_int_distribution<size_t> dist(0, 30);
-
-  std::atomic<size_t> numPhilDone{n};
-
-  auto getEpoch = [] {
-    return std::time(nullptr);
-  };
-
-  auto startPhilosopher = [&](const size_t pid, const size_t thinkingTime,
-                              const size_t eatingTime, size_t runTimeSec) {
-    const auto startEpoch = getEpoch();
-    size_t r = 0;
-    while (getEpoch() < startEpoch + runTimeSec) {
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(thinkingTime + dist(rnd)));
-      ps.takeForks(pid);
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(eatingTime + dist(rnd)));
-      ps.putForks(pid);
-      LOG(INFO) << "#" << pid << " finished round #" << ++r << " @" << getEpoch();
-    }
-    --numPhilDone;
-    return r;
-  };
   std::vector<size_t> thinkingTime = {
-      0, // The fastest
-      40, // Super slow
+      0,  // The fastest
       20, // Slow
-      1,  1,
+      1,
+      40, // Super slow
+      1,
   };
-
   std::vector<size_t> eatingTime = {
-      0, // The fastest
+      0,  // The fastest
+      5,  // Slow
+      1,
       10, // Super slow
-      5, // Slow
-      1,  1,
+      1,
   };
-  std::vector<size_t> howManyTimesEating(n, 0);
-  const size_t runTimeSec = 10;
-  std::vector<std::thread> threads;
-  for (size_t i = 0; i < n; ++i) {
-    threads.emplace_back([&, pid = i] {
-      howManyTimesEating[pid] =
-          startPhilosopher(pid, thinkingTime[pid], eatingTime[pid], runTimeSec);
-    });
-  }
+  const size_t runTimeSec = 5;
 
-  while (numPhilDone > 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(23));
-    const auto st = ps.getStates();
-    for (size_t pid = 0; pid < n; ++pid) {
-      if (st[pid] == PhilosophersSync::State::EATING) {
-        CHECK(st[(pid + 1) % n] != PhilosophersSync::State::EATING);
+  auto runTest = [&] {
+    const size_t n = 5;
+    PhilosophersSync ps(n);
+
+    std::mt19937 rnd(std::time(nullptr));
+    std::uniform_int_distribution<size_t> dist(0, 30);
+
+    std::atomic<size_t> numPhilDone{n};
+
+    auto getEpoch = [] { return std::time(nullptr); };
+
+    auto startPhilosopher = [&](const size_t pid, const size_t thinkingTime,
+                                const size_t eatingTime) {
+      const auto startEpoch = getEpoch();
+      size_t r = 0;
+      while (getEpoch() < startEpoch + runTimeSec) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(thinkingTime + dist(rnd)));
+        ps.takeForks(pid);
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(eatingTime + dist(rnd)));
+        ps.putForks(pid);
+        ++r;
+        // LOG(INFO) << "#" << pid << " finished round #" << r << " @"
+                  // << getEpoch();
+      }
+      --numPhilDone;
+      return r;
+    };
+    std::vector<size_t> howManyTimesEating(n, 0);
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < n; ++i) {
+      threads.emplace_back([&, pid = i] {
+        howManyTimesEating[pid] =
+            startPhilosopher(pid, thinkingTime[pid], eatingTime[pid]);
+      });
+    }
+
+    while (numPhilDone > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(23));
+      const auto st = ps.getStates();
+      for (size_t pid = 0; pid < n; ++pid) {
+        if (st[pid] == PhilosophersSync::State::EATING) {
+          CHECK(st[(pid + 1) % n] != PhilosophersSync::State::EATING);
+        }
       }
     }
-  }
 
-  for (auto& thr : threads) {
-    thr.join();
-  }
+    for (auto &thr : threads) {
+      thr.join();
+    }
 
-  for (size_t pid = 0; pid < n; ++pid) {
-    LOG(INFO) << "Philosopher #" << pid << " ate " << howManyTimesEating[pid]
-              << " times.";
-  }
+    LOG(INFO) << "-----------------";
+    for (size_t pid = 0; pid < n; ++pid) {
+      LOG(INFO) << "Philosopher #" << pid << " ate " << howManyTimesEating[pid]
+                << " times.";
+    }
+  };
+
+  SCOPED_TRACE("5 philosophers");
+  runTest();
+
+  SCOPED_TRACE("2 philosophers");
+  thinkingTime[1] = thinkingTime[2] = thinkingTime[4] = runTimeSec * 1000 + 200;
+  runTest();
 }
 
 int main(int argc, char* argv[]) {
