@@ -1,4 +1,4 @@
-
+#include <random>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -102,7 +102,8 @@ TEST(BinarySemaphoreTest, Basic) {
   EXPECT_EQ(3, v);
 }
 
-struct PhilosophersSync {
+class PhilosophersSync {
+ public:
   enum class State {
     THINKING = 0, // philosopher is thinking
     HUNGRY = 1,   // philosopher is trying to get forks
@@ -115,6 +116,43 @@ struct PhilosophersSync {
       sems_.push_back(std::make_unique<BinarySemaphore>(0));
     }
   }
+
+  std::unique_lock<std::mutex> acquireLock() & {
+    return std::unique_lock<std::mutex>(m_);
+  }
+
+  void takeForks(size_t pid) & {
+    {
+      std::lock_guard<std::mutex> lg(m_);
+      states_[pid] = State::HUNGRY;
+      tryToEat(pid);
+    }
+    // May be blocked here until both left and right philosophers yield by
+    // calling sems_[pid].release() in 'tryToEat(pid)' on behalf of 'pid'.
+    sems_[pid]->acquire();
+  }
+
+  void putForks(size_t pid) & {
+    std::lock_guard<std::mutex> lg(m_);
+    states_[pid] = State::THINKING;
+    tryToEat((pid + 1) % numPhils_);
+    tryToEat((pid + numPhils_ - 1) % numPhils_);
+  }
+
+  std::vector<State> getStates() const {
+    std::vector<State> res;
+    {
+      std::lock_guard lg(m_);
+      res = states_;
+    }
+    return res;
+  }
+
+ private:
+  const size_t numPhils_;
+  mutable std::mutex m_;
+  std::vector<State> states_;
+  std::vector<std::unique_ptr<BinarySemaphore>> sems_;
 
   // The caller must be holding 'm_'.
   // It's a non-blocking API.
@@ -129,38 +167,78 @@ struct PhilosophersSync {
     }
   }
 
-  std::unique_lock<std::mutex> acquireLock() & {
-    return std::unique_lock<std::mutex>(m_);
-  }
-
-  void takeForks(size_t pid, std::function<void()> cb) & {
-    {
-      std::lock_guard<std::mutex> lg(m_);
-      states_[pid] = State::HUNGRY;
-      tryToEat(pid);
-    }
-    // May be blocked here until both left and right philosophers yield by
-    // calling sems_[pid].release() in 'tryToEat(pid)' on behalf of 'pid'.
-    sems_[pid]->acquire();
-    cb();
-  }
-
-  void putForks(size_t pid) & {
-    std::lock_guard<std::mutex> lg(m_);
-    states_[pid] = State::THINKING;
-    tryToEat((pid + 1) % numPhils_);
-    tryToEat((pid + numPhils_ - 1) % numPhils_);
-  }
-
- private:
-  const size_t numPhils_;
-  std::mutex m_;
-  std::vector<State> states_;
-  std::vector<std::unique_ptr<BinarySemaphore>> sems_;
 };
 
 TEST(DiningPhilosophersTest, Basic) {
+  const size_t n = 5;
+  PhilosophersSync ps(n);
 
+  std::mt19937 rnd(std::time(nullptr));
+  std::uniform_int_distribution<size_t> dist(0, 30);
+
+  std::atomic<size_t> numPhilDone{n};
+
+  auto getEpoch = [] {
+    return std::time(nullptr);
+  };
+
+  auto startPhilosopher = [&](const size_t pid, const size_t thinkingTime,
+                              const size_t eatingTime, size_t runTimeSec) {
+    const auto startEpoch = getEpoch();
+    size_t r = 0;
+    while (getEpoch() < startEpoch + runTimeSec) {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(thinkingTime + dist(rnd)));
+      ps.takeForks(pid);
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(eatingTime + dist(rnd)));
+      ps.putForks(pid);
+      LOG(INFO) << "#" << pid << " finished round #" << ++r << " @" << getEpoch();
+    }
+    --numPhilDone;
+    return r;
+  };
+  std::vector<size_t> thinkingTime = {
+      0, // The fastest
+      40, // Super slow
+      20, // Slow
+      1,  1,
+  };
+
+  std::vector<size_t> eatingTime = {
+      0, // The fastest
+      10, // Super slow
+      5, // Slow
+      1,  1,
+  };
+  std::vector<size_t> howManyTimesEating(n, 0);
+  const size_t runTimeSec = 10;
+  std::vector<std::thread> threads;
+  for (size_t i = 0; i < n; ++i) {
+    threads.emplace_back([&, pid = i] {
+      howManyTimesEating[pid] =
+          startPhilosopher(pid, thinkingTime[pid], eatingTime[pid], runTimeSec);
+    });
+  }
+
+  while (numPhilDone > 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(23));
+    const auto st = ps.getStates();
+    for (size_t pid = 0; pid < n; ++pid) {
+      if (st[pid] == PhilosophersSync::State::EATING) {
+        CHECK(st[(pid + 1) % n] != PhilosophersSync::State::EATING);
+      }
+    }
+  }
+
+  for (auto& thr : threads) {
+    thr.join();
+  }
+
+  for (size_t pid = 0; pid < n; ++pid) {
+    LOG(INFO) << "Philosopher #" << pid << " ate " << howManyTimesEating[pid]
+              << " times.";
+  }
 }
 
 int main(int argc, char* argv[]) {
