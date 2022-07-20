@@ -63,7 +63,7 @@ class BinarySemaphore {
  public:
    BinarySemaphore(size_t v = 0)
        : v_(std::min<size_t>(1, std::max<size_t>(0, v))) {}
-   BinarySemaphore(const BinarySemaphore &) = default;
+   BinarySemaphore(const BinarySemaphore &) = delete;
    void release() & {
     {
       std::lock_guard lg(m_);
