@@ -91,6 +91,39 @@ class BinarySemaphore {
 
 #endif
 
+class Semaphore {
+ public:
+   Semaphore(size_t v = 0) : v_(std::max<size_t>(0, v)) {}
+   void release() & {
+    {
+      std::lock_guard lg(m_);
+      ++v_;
+    }
+    cv_.notify_all();
+   }
+
+   //A blocking API
+   void acquire() & {
+     std::unique_lock lg(m_);
+     if (v_ > 0) {
+       --v_;
+       return;
+     }
+     cv_.wait(lg, [this] { return v_ > 0; });
+     --v_;
+   }
+
+   size_t value() const {
+     std::lock_guard<std::mutex> lg(m_);
+     return v_;
+   }
+
+ private:
+   mutable std::mutex m_;
+   size_t v_;
+   std::condition_variable cv_;
+};
+
 TEST(BinarySemaphoreTest, Basic) {
   BinarySemaphore bs(0);
   std::atomic<int> v{1};
@@ -126,6 +159,36 @@ TEST(BinarySemaphoreTest, Threads) {
   for (auto& thr : threads) {
     thr.join();
   }
+}
+
+TEST(SemaphoreTest, Threads) {
+  Semaphore bs(3);
+  std::atomic<size_t> threadsInCriticalSection{0};
+  std::vector<std::thread> threads;
+  std::mt19937 rnd(std::time(nullptr));
+  std::uniform_int_distribution<size_t> dist(0, 60);
+  bool seen3 = false;
+  for (int i = 0; i < 15; ++i) {
+    threads.emplace_back([&] {
+      for (int j = 0; j < 10; ++j) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(60 + dist(rnd)));
+        bs.acquire();
+        ++threadsInCriticalSection;
+        CHECK_LE(threadsInCriticalSection, 3);
+        if (3 == threadsInCriticalSection) {
+          seen3 = true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(60 + dist(rnd)));
+        --threadsInCriticalSection;
+        bs.release();
+      }
+    });
+  }
+
+  for (auto& thr : threads) {
+    thr.join();
+  }
+  EXPECT_TRUE(seen3);
 }
 
 class PhilosophersSync {

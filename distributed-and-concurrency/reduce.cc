@@ -87,6 +87,7 @@ struct Fence {
     std::unique_lock<std::mutex> lk(m);
     ++round2count[round];
     if (round2count[round] == count) {
+      lk.unlock();
       cv.notify_all();
     } else {
       cv.wait(lk,
