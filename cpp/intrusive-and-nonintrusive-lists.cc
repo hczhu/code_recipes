@@ -50,6 +50,7 @@ class IntrusiveList {
   private:
     Link head_;
 };
+
 class Node : public Link {
   public:
     Node(int v = 0) : data_(v) {}
@@ -71,7 +72,9 @@ class NonIntrusiveList {
       list_.AddToFront(new InnerNode(&new_data));
     }
 };
+
 #define CHECK_DERIVE(x, y) do { y* _tmp_y = (x*)(0); _tmp_y = NULL;} while(0);
+
 int main() {
   CHECK_DERIVE(Node, Link);
   const int n=10000000;
