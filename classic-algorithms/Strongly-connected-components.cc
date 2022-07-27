@@ -27,6 +27,8 @@
 #include <valarray>
 #include <vector>
 
+#include "../data-structures/Graph.h"
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gmock/gmock.h>
@@ -56,42 +58,20 @@ class SCC : public testing::Test {
 };
 
 
-using Edge = std::pair<int, int>;
-
-void sortEdges(int N, std::vector<Edge>& edges, std::vector<int>& edgeStart) {
-  std::vector<int> cnt(N, 0);
-  for (const auto& [a, b] : edges) {
-    ++cnt[a];
-  }
-  for (int i = 1; i < cnt.size(); ++i) {
-    cnt[i] += cnt[i-1];
-  }
-  edgeStart.resize(N + 1);
-  edgeStart[0] = 0;
-  for (int i = 0; i < cnt.size(); ++i) {
-    edgeStart[i + 1] = cnt[i];
-  }
-  std::vector<Edge> sortedEdges(edges.size());
-  for (const auto& [a, b] : edges) {
-    CHECK_GT(cnt[a], 0);
-    sortedEdges[--cnt[a]] = Edge(a, b);
-  }
-  edges = sortedEdges;
-}
-
+using DEL = graph::DirectEdgeList<>;
 // A two pass algorithm
 // 'scc' will be returned SCCs in topological order.
 // I.E. if there is an edge from scc[i] to scc[j], then i < j
-std::vector<std::vector<int>> KosarajuAlgorithm(int N, std::vector<Edge> edges) {
-  std::vector<int> edgeStart;
-  sortEdges(N, edges, edgeStart);
-  CHECK_EQ(edgeStart.size(), N + 1);
-
-  auto dfs = [&edges, &edgeStart, N] (const std::vector<int>& nodeOder, auto nodeFinishCallback) {
+std::vector<std::vector<int>> KosarajuAlgorithm(int n, DEL &el) {
+  auto dfs = [&el, n](const std::vector<int> &nodeOder,
+                      auto nodeFinishCallback) {
     // LOG(INFO) << "Running dfs.";
-    std::vector<bool> visited(N, false);
+    std::vector<bool> visited(n, false);
     std::vector<int> stack;
-    auto updatedEdgeStart = edgeStart;
+    std::vector<DEL::Iterator> edgeItr;
+    for (size_t i = 0; i < n; ++i) {
+      edgeItr.push_back(el.edgeIterator(i));
+    }
     int dfsId = -1;
     for (auto root : nodeOder) {
       if (visited[root]) {
@@ -102,15 +82,16 @@ std::vector<std::vector<int>> KosarajuAlgorithm(int N, std::vector<Edge> edges) 
       visited[root] = true;
       while (!stack.empty()) {
         auto v = stack.back();
-        auto &p = updatedEdgeStart[v];
-        while (p < edgeStart[v + 1] && visited[edges[p].second]) {
-          ++p;
+        auto &itr = edgeItr[v];
+        while (itr.valid() && visited[itr.tail()]) {
+          ++itr;
         }
-        if (p == edgeStart[v + 1]) {
+        if (!itr.valid()) {
           nodeFinishCallback(v, dfsId);
           stack.pop_back();
         } else {
-          auto next = edges[p].second;
+          auto next = itr.tail();
+          ++itr;
           stack.push_back(next);
           visited[next] = true;
         }
@@ -118,8 +99,8 @@ std::vector<std::vector<int>> KosarajuAlgorithm(int N, std::vector<Edge> edges) 
     }
   };
 
-  std::vector<int> nodeOrder(N);
-  for (int i = 0; i < N; ++i) {
+  std::vector<int> nodeOrder(n);
+  for (int i = 0; i < n; ++i) {
     nodeOrder[i] = i;
   }
   std::vector<int> dfsOrder;
@@ -129,10 +110,7 @@ std::vector<std::vector<int>> KosarajuAlgorithm(int N, std::vector<Edge> edges) 
 
   dfs(nodeOrder, firstPassCallback);
 
-  for (auto& e : edges) {
-    std::swap(e.first, e.second);
-  }
-  sortEdges(N, edges, edgeStart);
+  el.reverse();
 
   // EXPECT_EQ(edges, std::vector<Edge>());
   std::vector<std::vector<int>> scc;
@@ -142,28 +120,29 @@ std::vector<std::vector<int>> KosarajuAlgorithm(int N, std::vector<Edge> edges) 
     }
     scc[dfsId].push_back(v);
   };
-  reverse(dfsOrder.begin(), dfsOrder.end());
+  std::reverse(dfsOrder.begin(), dfsOrder.end());
   // EXPECT_EQ(dfsOrder, std::vector<int>());
   dfs(dfsOrder, secondPassCallback);
+  el.reverse();
 
   return scc;
 }
 
 // 'scc' will be returned SCCs in topological order.
 // I.E. if there is an edge from scc[i] to scc[j], then i < j
-std::vector<std::vector<int>> onePassAlgorithm(int N, std::vector<Edge> edges) {
-  std::vector<int> edgeStart;
-  sortEdges(N, edges, edgeStart);
-  std::vector<int> movingEdgeStart = edgeStart;
-
+std::vector<std::vector<int>> onePassAlgorithm(int n, DEL& el) {
   // Already assigned to an SCC
   constexpr int kInAnotherScc = -1;
   constexpr int kUnvisited = 0;
-  
+  std::vector<DEL::Iterator> edgeItr;
+  for (size_t i = 0; i < n; ++i) {
+    edgeItr.push_back(el.edgeIterator(i));
+  }
+
   std::vector<int> stack;
-  std::vector<bool> visited(N, false);
-  std::vector<int> flags(N, kUnvisited);
-  std::vector<int> low(N, 0);
+  std::vector<bool> visited(n, false);
+  std::vector<int> flags(n, kUnvisited);
+  std::vector<int> low(n, 0);
   int gOrder = 0;
   std::vector<std::vector<int>> scc;
   std::vector<int> firstSeenOrder;
@@ -173,7 +152,7 @@ std::vector<std::vector<int>> onePassAlgorithm(int N, std::vector<Edge> edges) {
     flags[v] = low[v] = gOrder;
     firstSeenOrder.push_back(v);
   };
-  for (int root = 0; root < N; ++root) {
+  for (int root = 0; root < n; ++root) {
     if (flags[root] != kUnvisited) {
       continue;
     }
@@ -181,18 +160,23 @@ std::vector<std::vector<int>> onePassAlgorithm(int N, std::vector<Edge> edges) {
     // LOG(INFO) << "Root " << root << " low = " << low[root];
     while (!stack.empty()) {
       auto v = stack.back();
-      auto& p = movingEdgeStart[v];
-      int u = -1;
-      while (p < edgeStart[v + 1] && kUnvisited != flags[u = edges[p].second]) {
-        ++p;
+      auto& itr = edgeItr[v];
+      size_t u = n;
+      while (itr.valid() && kUnvisited != flags[u = itr.tail()]) {
+        ++itr;
         if (flags[u] != kInAnotherScc) {
           // LOG(INFO) << v << " ----> " << u;
           low[v] = std::min(low[v], low[u]);
         }
       }
-      if (p == edgeStart[v + 1]) {
+      if (itr.valid()) {
+        pushToStack(u);
+        ++itr;
+        // LOG(INFO) << "New node " << u << " low = " << low[u];
+      } else {
         stack.pop_back();
-        // LOG(INFO) << "Pop out low[" << v << "] = " << low[v] << " with flag " << flags[v];
+        // LOG(INFO) << "Pop out low[" << v << "] = " << low[v] << " with flag "
+        // << flags[v];
         if (!stack.empty()) {
           auto parent = stack.back();
           low[parent] = std::min(low[parent], low[v]);
@@ -205,12 +189,8 @@ std::vector<std::vector<int>> onePassAlgorithm(int N, std::vector<Edge> edges) {
             scc.back().push_back(lastNode);
             firstSeenOrder.pop_back();
             flags[lastNode] = kInAnotherScc;
-          } while(lastNode != v);
+          } while (lastNode != v);
         }
-      } else {
-        pushToStack(u);
-        ++p;
-        // LOG(INFO) << "New node " << u << " low = " << low[u];
       }
     }
   }
@@ -219,14 +199,16 @@ std::vector<std::vector<int>> onePassAlgorithm(int N, std::vector<Edge> edges) {
 }
 
 size_t solve(int N, int M, std::vector<int> A, std::vector<int> B) {
-  std::vector<Edge> edges(M);
   std::vector<std::vector<int>> node2Edges(N);
+  DEL el;
   for (int i = 0; i < M; ++i) {
-    edges[i] = Edge(A[i] - 1, B[i] - 1);
-    node2Edges[edges[i].first].push_back(edges[i].second);
+    el.addEdge(A[i] - 1, B[i] - 1);
+    node2Edges[A[i] - 1].push_back(B[i] - 1);
   }
+
+  el.finalize();
   
-  auto scc = onePassAlgorithm(N, edges);
+  auto scc = onePassAlgorithm(N, el);
   std::vector<int> node2scc(N);
   std::reverse(scc.begin(), scc.end());
   for (int i = 0; i < scc.size(); ++i) {
@@ -261,23 +243,22 @@ TEST_F(SCC, BasicTest) {
     9, 5, 7, 8, 6, 4, 5, 3, 9,
   };
 
-  std::vector<Edge> edges;
+  DEL el;
   for (int i = 0; i < A.size(); ++i) {
-    edges.emplace_back(A[i] - 1, B[i] - 1);
+    el.addEdge(A[i] - 1, B[i] - 1);
   }
-  auto edgesCopy = edges;
   {
     std::vector<std::vector<int>> expectedScc = {{9}, {5}, {3, 8, 2}, {7},
                                                  {1}, {4}, {6},       {0}};
-    EXPECT_EQ(KosarajuAlgorithm(10, edges), expectedScc);
+    el.finalize();
+    EXPECT_EQ(KosarajuAlgorithm(10, el), expectedScc);
   }
 
   {
-    EXPECT_EQ(edges, edgesCopy);
-    std::vector<std::vector<int>> expectedScc = {
-      { 9 }, { 5 }, { 8, 3, 2 }, { 7 }, { 1 }, { 4 }, { 6 }, { 0 }
-    };
-    EXPECT_EQ(onePassAlgorithm(10, edges), expectedScc);
+    std::vector<std::vector<int>> expectedScc = {{9}, {5}, {8, 3, 2}, {7},
+                                                 {1}, {4}, {6},       {0}};
+    el.finalize();
+    EXPECT_EQ(onePassAlgorithm(10, el), expectedScc);
   }
 
   EXPECT_EQ(solve(10, A.size(), A, B), 5);
@@ -285,15 +266,17 @@ TEST_F(SCC, BasicTest) {
 
 TEST_F(SCC, randomTest) {
   auto testOne = [] {
-    std::vector<Edge> edges;
+    DEL el;
     int N = 12;
     int M = 30;
     for (int i = 0; i < M; ++i) {
-      edges.emplace_back(rand() % N, rand() % N);
+      el.addEdge(rand() % N, rand() % N);
     }
     // EXPECT_EQ(std::vector<Edge>(), edges);
-    auto scc1 = KosarajuAlgorithm(N, edges);
-    auto scc2 = onePassAlgorithm(N, edges);
+    el.finalize();
+    auto scc1 = KosarajuAlgorithm(N, el);
+    el.finalize();
+    auto scc2 = onePassAlgorithm(N, el);
     auto sortScc = [](auto& scc) {
       for (auto& s : scc) {
         std::sort(s.begin(), s.end());
