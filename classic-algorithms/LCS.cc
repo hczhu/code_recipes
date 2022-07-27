@@ -1,4 +1,4 @@
-
+#include <random>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -58,66 +58,102 @@ void _displayType(T&& t);
  *
  */
 
-namespace LCS {
-#define N 20010
-#define S 100
-int rowMatch[N + 2], colMatch[N + 2];
-int nextPos1[N + 2][S], nextPos2[N + 2][S];
-void preprocess(int str1[], int n, int str2[], int m, int s = S) {
-  for (int i = 0; i < s; i++)
-    nextPos1[n + 1][i] = nextPos1[n][i] = n,
-                 nextPos2[m + 1][i] = nextPos2[m][i] = m;
-  for (int i = n - 1; i >= 0; i--) {
-    memcpy(nextPos1[i], nextPos1[i + 1], sizeof(int) * s);
-    nextPos1[i][str1[i]] = i;
+size_t longestCommonSubsequence(const std::string &str1Input,
+                                const std::string &str2Input) {
+  auto str1 = reinterpret_cast<const unsigned char *>(str1Input.data());
+  auto str2 = reinterpret_cast<const unsigned char *>(str2Input.data());
+  size_t n1 = str1Input.size();
+  size_t n2 = str2Input.size();
+
+  if (n1 > n2) {
+    std::swap(str1, str2);
+    std::swap(n1, n2);
   }
-  for (int i = m - 1; i >= 0; i--) {
-    memcpy(nextPos2[i], nextPos2[i + 1], sizeof(int) * s);
-    nextPos2[i][str2[i]] = i;
-  }
-}
-int longestCommonSubsequence(int str1[], int n, int str2[], int m) {
-  if (n > m)
-    swap(str1, str2), swap(n, m);
-  const int s =
-      1 + max(*max_element(str1, str1 + n), *max_element(str2, str2 + m));
-  preprocess(str1, n, str2, m, s);
+
+  // Now, str1.size() <= str2.size()
+  const size_t s = 1 + std::max(*std::max_element(str1, str1 + n1),
+                                *std::max_element(str2, str2 + n2));
+
+  auto getNextPos = [](size_t n, size_t s, const unsigned char *str) {
+    // nextPos[a][b] points to the smallest 'i' such that i >= a && str[i] == b
+    std::vector<std::vector<int>> nextPos(n + 2, std::vector<int>(s));
+    std::fill(nextPos[n + 1].begin(), nextPos[n + 1].end(), n);
+    nextPos[n] = nextPos[n + 1];
+
+    for (int i = n - 1; i >= 0; i--) {
+      nextPos[i] = nextPos[i + 1];
+      nextPos[i][str[i]] = i;
+    }
+
+    return nextPos;
+  };
+
+  const auto nextPos1 = getNextPos(n1, s, str1);
+  const auto nextPos2 = getNextPos(n2, s, str2);
+
+  std::vector<int> rowMatch(n1 + 2, n2), colMatch(n1 + 2, n1);
   colMatch[0] = rowMatch[0] = -1;
-  for (int i = 1; i <= n + 1; i++)
-    rowMatch[i] = m, colMatch[i] = n;
+
   int low = 1;
-  for (int i = 0; i < n; i++) {
-    int r, c;
-    if (colMatch[low] == i)
-      c = nextPos2[rowMatch[low++] + 1][str1[i]];
-    else
-      c = nextPos2[i][str1[i]];
-    for (int k = low; c < m; k++) {
-      int tmp = rowMatch[k];
+  for (int i = 0; i < n1; i++) {
+    int c = colMatch[low] == i ? (nextPos2[rowMatch[low++] + 1][str1[i]])
+                               : nextPos2[i][str1[i]];
+    for (int k = low; c < n2; k++) {
+      const auto tmp = rowMatch[k];
       if (tmp >= c) {
         rowMatch[k] = c;
         c = nextPos2[tmp + 1][str1[i]];
       }
     }
-    if (rowMatch[low] == i)
-      r = nextPos1[colMatch[low++] + 1][str2[i]];
-    else
-      r = nextPos1[i + 1][str2[i]];
-    for (int k = low; r < n; k++) {
-      int tmp = colMatch[k];
+    int r = rowMatch[low] == i ? (nextPos1[colMatch[low++] + 1][str2[i]])
+                               : nextPos1[i + 1][str2[i]];
+    for (int k = low; r < n1; k++) {
+      const auto tmp = colMatch[k];
       if (tmp >= r) {
         colMatch[k] = r;
         r = nextPos1[tmp + 1][str2[i]];
       }
     }
   }
-  while (rowMatch[low] < m)
+  while (rowMatch[low] < n2) {
     low++;
+  }
   return low - 1;
 }
-};
 
 TEST(LCS_test, Basic) {
+  EXPECT_EQ(longestCommonSubsequence("a1b13c234123d", "9a99b999cd999"), 4);
+
+  auto testRandomStrings = [](size_t n1, size_t n2) {
+    std::mt19937 rnd(std::time(nullptr));
+    std::uniform_int_distribution<size_t> dist(1, 5);
+
+    auto getStr = [&](size_t n)  {
+      std::string s(n, '0');
+      for (size_t i = 0; i < n1; ++i) {
+        s[i] = dist(rnd);
+      }
+      return s;
+    };
+
+    const auto str1 = getStr(n1);
+    const auto str2 = getStr(n2);
+
+    std::vector<std::vector<int>> m(n1 + 1, std::vector<int>(n2 + 1, 0));
+    for (int i = 1; i <= n1; ++i) {
+      for (int j = 1; j <= n2; ++j) {
+        m[i][j] = str1[i - 1] == str2[j - 1]
+                      ? (1 + m[i - 1][j - 1])
+                      : std::max(m[i - 1][j], m[i][j - 1]);
+      }
+    }
+
+      EXPECT_EQ(m[n1][n2], longestCommonSubsequence(str1, str2));
+  };
+  
+  testRandomStrings(10, 100);
+  testRandomStrings(50, 100);
+  testRandomStrings(100, 60);
 }
 
 int main(int argc, char* argv[]) {
