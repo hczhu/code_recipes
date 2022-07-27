@@ -126,11 +126,11 @@ TEST(LCS_test, Basic) {
 
   auto testRandomStrings = [](size_t n1, size_t n2) {
     std::mt19937 rnd(std::time(nullptr));
-    std::uniform_int_distribution<size_t> dist(1, 5);
+    std::uniform_int_distribution<size_t> dist(1, 6);
 
-    auto getStr = [&](size_t n)  {
+    auto getStr = [&](size_t n) {
       std::string s(n, '0');
-      for (size_t i = 0; i < n1; ++i) {
+      for (size_t i = 0; i < n; ++i) {
         s[i] = dist(rnd);
       }
       return s;
@@ -139,21 +139,26 @@ TEST(LCS_test, Basic) {
     const auto str1 = getStr(n1);
     const auto str2 = getStr(n2);
 
-    std::vector<std::vector<int>> m(n1 + 1, std::vector<int>(n2 + 1, 0));
+    std::vector<int> m((n1 + 1) * (n2 + 1));
+#define D(i, j) m[(i) * (n2 + 1) + (j)]
     for (int i = 1; i <= n1; ++i) {
       for (int j = 1; j <= n2; ++j) {
-        m[i][j] = str1[i - 1] == str2[j - 1]
-                      ? (1 + m[i - 1][j - 1])
-                      : std::max(m[i - 1][j], m[i][j - 1]);
+        D(i, j) = str1[i - 1] == str2[j - 1]
+                      ? (1 + D(i - 1, j - 1))
+                      : std::max(D(i - 1, j), D(i, j - 1));
       }
     }
 
-      EXPECT_EQ(m[n1][n2], longestCommonSubsequence(str1, str2));
+    LOG(INFO) << "LCS for two random strings: " << D(n1, n2);
+    EXPECT_EQ(D(n1, n2), longestCommonSubsequence(str1, str2));
+#undef D
   };
-  
+
   testRandomStrings(10, 100);
   testRandomStrings(50, 100);
   testRandomStrings(100, 60);
+  testRandomStrings(500, 100);
+  testRandomStrings(300, 200);
 }
 
 int main(int argc, char* argv[]) {
