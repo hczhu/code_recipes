@@ -150,7 +150,7 @@ TEST(IntAndEnglish, Everything) {
   size_t kMax = 2e9;
   for (size_t v = 1; v < kMax; v += (rand() % 10000)) {
     const auto english = int2English(v);
-    LOG_EVERY_N(INFO, 10000) << v << " = " << english;
+    // LOG_EVERY_N(INFO, 10000) << v << " = " << english;
     ASSERT_EQ(v, english2Int(english));
   }
   for (size_t v = 1; v <= kMax; v *= 10) {

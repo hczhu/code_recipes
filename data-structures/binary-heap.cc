@@ -60,7 +60,6 @@ public:
 
   BinaryHeap(Cmp &&cmpLess, const std::vector<size_t> &keys)
       : BinaryHeap(keys.size(), std::move(cmpLess)) {
-    // TODO: implement heapifying an array
     for (size_t i = 0; i < keys.size(); ++i) {
       heap_[i] = keys[i];
       hpos_[heap_[i]] = i;
