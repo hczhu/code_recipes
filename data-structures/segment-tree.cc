@@ -136,122 +136,119 @@ struct Seats {
   size_t sumOccupied = 0;
 };
 
-
-
 class BookMyShow {
 public:
-    BookMyShow(int n, int m) : m_(m), tree_(n) {
-        
-    }
+  BookMyShow(int n, int m) : m_(m), tree_(n) {}
 
-    bool filterOutSeg(const Seats& seg, size_t l, size_t r, size_t maxR){
-        if (seg.minOccupied == m_) {
-          return true;
-        }
-        if (maxR <= l) {
-          // Not overlap
-          return true;
-        }
-        return false;
-    }
-
-    std::vector<int> gather(int k, int maxRow) {
-      int row = -1, col = -1;
-      size_t maxR = maxRow + 1;
-      SegmentTree<Seats>::Callback canGather = [&, this](Seats &seg, size_t l,
-                                                   size_t r) -> bool {
-        // std::cout << "[" << l << ", " << r << ") = " << seg.minOccupied << " @" << (&seg - &tree_.segs_[0]) << std::endl;
-
-        if (row >= 0) {
-          // Already found a row
-          return false;
-        }
-        if (filterOutSeg(seg, l, r, maxR)) {
-          return false;
-        }
-        if (seg.minOccupied + k > m_) {
-          // No enough capacity in the whole segment.
-          return false;
-        }
-        if (l + 1 == r) {
-          // std::cout << " Picked row " << l << std::endl;
-          row = l;
-          col = seg.minOccupied;
-          seg.minOccupied += k;
-          seg.sumOccupied += k;
-        }
-        return true;
-      };
-
-      // std::cout << " ====================== " << std::endl;
-      tree_.dfsIf(canGather, updateCb_);
-      if (row >= 0) {
-        return {row, col};
-      }
-      return {};
-    }
-    
-    bool scatter(int k, int maxRow) {
-      bool updateNode = false;
-      auto neededSeats = k;
-      Tree::Callback scatterSeg =
-          [&updateNode, &neededSeats, maxr = maxRow + 1,
-           this](Seats &seg, size_t l, size_t r) -> bool {
-
-        // std::cout << "[" << l << ", " << r << ") = " << seg.sumOccupied << std::endl;
-
-        if (neededSeats == 0) {
-          return false;
-        }
-        if (filterOutSeg(seg, l, r, maxr)) {
-          return false;
-        }
-
-        if (maxr >= r) {
-          // The rows in this segment are all usable.
-          auto seats = (r - l) * m_ - seg.sumOccupied;
-          if (seats <= neededSeats) {
-            if (updateNode) {
-              // The whole segment is occupied now.
-              seg.minOccupied = m_;
-              seg.sumOccupied = m_ * (r - l);
-            }
-            // std::cout << "    occupied " << seats << " seats." << std::endl;
-            neededSeats -= seats;
-            return false;
-          } else if (l + 1 == r) {
-            // Leaf node
-            if (updateNode) {
-              seg.minOccupied += neededSeats;
-              seg.sumOccupied = seg.minOccupied;
-            }
-            // std::cout << "    occupied at a leaf " << neededSeats << " seats: " << seg.minOccupied << " " << seg.sumOccupied << " @" << (&seg - &tree_.segs_[0]) << std::endl;
-            neededSeats = 0;
-            return false;
-          }
-        }
-        return true;
-      };
-      
-      Tree::UpdateCallback nullCb = [](Seats&, const Seats&, const Seats&) {
-      };
-      // std::cout << " ====================== " << std::endl;
-      tree_.dfsIf(scatterSeg, nullCb);
-      if (neededSeats > 0) {
-        return false;
-      }
-
-      neededSeats = k;
-      updateNode = true;
-      // std::cout << " ====================== " << std::endl;
-      tree_.dfsIf(scatterSeg, updateCb_);
+  bool filterOutSeg(const Seats &seg, size_t l, size_t r, size_t maxR) {
+    if (seg.minOccupied == m_) {
       return true;
     }
-
-    void updateSegment(Seats& parent, const Seats& lc, const Seats& rc) {
-      parent.minOccupied = std::min(lc.minOccupied, rc.minOccupied);
-      parent.sumOccupied = lc.sumOccupied + rc.sumOccupied;
+    if (maxR <= l) {
+      // Not overlap
+      return true;
     }
+    return false;
+  }
+
+  std::vector<int> gather(int k, int maxRow) {
+    int row = -1, col = -1;
+    size_t maxR = maxRow + 1;
+    SegmentTree<Seats>::Callback canGather = [&, this](Seats &seg, size_t l,
+                                                       size_t r) -> bool {
+      // std::cout << "[" << l << ", " << r << ") = " << seg.minOccupied << " @"
+      // << (&seg - &tree_.segs_[0]) << std::endl;
+
+      if (row >= 0) {
+        // Already found a row
+        return false;
+      }
+      if (filterOutSeg(seg, l, r, maxR)) {
+        return false;
+      }
+      if (seg.minOccupied + k > m_) {
+        // No enough capacity in the whole segment.
+        return false;
+      }
+      if (l + 1 == r) {
+        // std::cout << " Picked row " << l << std::endl;
+        row = l;
+        col = seg.minOccupied;
+        seg.minOccupied += k;
+        seg.sumOccupied += k;
+      }
+      return true;
+    };
+
+    // std::cout << " ====================== " << std::endl;
+    tree_.dfsIf(canGather, updateCb_);
+    if (row >= 0) {
+      return {row, col};
+    }
+    return {};
+  }
+
+  bool scatter(int k, int maxRow) {
+    bool updateNode = false;
+    auto neededSeats = k;
+    Tree::Callback scatterSeg = [&updateNode, &neededSeats, maxr = maxRow + 1,
+                                 this](Seats &seg, size_t l, size_t r) -> bool {
+      // std::cout << "[" << l << ", " << r << ") = " << seg.sumOccupied <<
+      // std::endl;
+
+      if (neededSeats == 0) {
+        return false;
+      }
+      if (filterOutSeg(seg, l, r, maxr)) {
+        return false;
+      }
+
+      if (maxr >= r) {
+        // The rows in this segment are all usable.
+        auto seats = (r - l) * m_ - seg.sumOccupied;
+        if (seats <= neededSeats) {
+          if (updateNode) {
+            // The whole segment is occupied now.
+            seg.minOccupied = m_;
+            seg.sumOccupied = m_ * (r - l);
+          }
+          // std::cout << "    occupied " << seats << " seats." << std::endl;
+          neededSeats -= seats;
+          return false;
+        } else if (l + 1 == r) {
+          // Leaf node
+          if (updateNode) {
+            seg.minOccupied += neededSeats;
+            seg.sumOccupied = seg.minOccupied;
+          }
+          // std::cout << "    occupied at a leaf " << neededSeats << " seats: "
+          // << seg.minOccupied << " " << seg.sumOccupied << " @" << (&seg -
+          // &tree_.segs_[0]) << std::endl;
+          neededSeats = 0;
+          return false;
+        }
+      }
+      return true;
+    };
+
+    Tree::UpdateCallback nullCb = [](Seats &, const Seats &, const Seats &) {};
+    // std::cout << " ====================== " << std::endl;
+    tree_.dfsIf(scatterSeg, nullCb);
+    if (neededSeats > 0) {
+      return false;
+    }
+
+    neededSeats = k;
+    updateNode = true;
+    // std::cout << " ====================== " << std::endl;
+    tree_.dfsIf(scatterSeg, updateCb_);
+    return true;
+  }
+
+  void updateSegment(Seats &parent, const Seats &lc, const Seats &rc) {
+    parent.minOccupied = std::min(lc.minOccupied, rc.minOccupied);
+    parent.sumOccupied = lc.sumOccupied + rc.sumOccupied;
+  }
 
   size_t m_;
   using Tree = SegmentTree<Seats>;
