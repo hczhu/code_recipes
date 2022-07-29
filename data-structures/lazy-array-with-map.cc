@@ -50,12 +50,6 @@ void _displayType(T&& t);
 
 /* template end */
 
-/*
-1. Fulfill the requested API shape. LazyArray with 2 methods: map and indexOf.
-2. `indexOf` returns the expected result.
-3. The function passed to `map` is called lazily.
-*/
-
 class LazyArray {
 public:
   using MapFn = std::function<int(int)>;
