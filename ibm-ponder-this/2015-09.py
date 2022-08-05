@@ -7,12 +7,12 @@ import itertools
 def verify(teams, N):
     n = len(teams)
     feasible = [False] * (N + n + 1)
-    for m in xrange(n + 1):
+    for m in range(n + 1):
         for st in itertools.combinations(teams, m):
             s = sum(st)
             if s <= N:
                 feasible[len(st) + N - s] = True
-    for i in xrange(N):
+    for i in range(N):
         assert feasible[i + 1], "Failed for number of teams: %s" % (i + 1)
     print(teams)
 
