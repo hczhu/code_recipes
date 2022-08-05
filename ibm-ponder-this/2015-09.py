@@ -14,7 +14,7 @@ def verify(teams, N):
                 feasible[len(st) + N - s] = True
     for i in xrange(N):
         assert feasible[i + 1], "Failed for number of teams: %s" % (i + 1)
-    print teams
+    print(teams)
 
 
 N = 78
