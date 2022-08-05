@@ -43,9 +43,9 @@ func CountDanceSequence(pn int) uint64 {
 			for j := 0; j < N; j++ {
 				res[i][j] = 0
 				for k := 0; k < N; k++ {
-					res[i][j] += a[i][k] * b[k][j]
-					res[i][j] %= M
+					res[i][j] += (a[i][k] * b[k][j]) % M
 				}
+				res[i][j] %= M
 			}
 		}
 		return res
