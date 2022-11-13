@@ -60,6 +60,9 @@ TEST(StringView, Basic) {
   sv.remove_prefix(1);
   EXPECT_EQ(std::distance(ss.begin(), sv.begin()), 3);
 
+  std::string cs(sv);
+  EXPECT_EQ(cs, "d");
+
   EXPECT_EQ(std::string_view("abcdefg"), ss);
 }
 
