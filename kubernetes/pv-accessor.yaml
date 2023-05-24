@@ -1,0 +1,45 @@
+# This yaml file defines a pod to access a specific existing PV which is already bounded to a PVC.
+# The PV is not accessible if its owner PVC access mode is ReadWriteOncePod.
+# Otherwise, this yaml schedules the accessor pod to the node where the target pod owning the PVC is running.
+# This co-location is required by PVC access mode. https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pv-accessor
+  namespace: __namespace__
+spec:
+  # Don't restart the pod.
+  restartPolicy: Never
+  # Add more tolerations here if they are required for the co-location.
+  tolerations:
+  - effect: "NoSchedule"
+    key: "key"
+    operator: "Equal"
+    value: "value"
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: statefulset.kubernetes.io/pod-name
+            operator: In
+            values:
+            - __target_pod__
+        topologyKey: kubernetes.io/hostname
+  volumes:
+  - name: pv-vol
+    persistentVolumeClaim:
+      # The target existing PVC name
+      claimName: __target_pvc__
+  containers:
+    - name: busybox
+      image: busybox
+      command: ["/bin/sleep", "3600" ]
+      volumeMounts:
+      - mountPath: /pv
+        name: pv-vol
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+
