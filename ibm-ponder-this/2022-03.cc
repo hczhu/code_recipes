@@ -3,37 +3,46 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <omp.h>
 #include <string>
-#include <unistd.h>
 #include <vector>
+#include <unistd.h>
+#include <omp.h>
+#include <algorithm>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-template <typename T> class _DisplayType;
+template<typename T>
+class _DisplayType;
 
-template <typename T> void _displayType(T &&t);
+template<typename T>
+void _displayType(T&& t);
 
 #define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
 
-#define BT(n) (1 << (n))
+#define BT(n) (1<<(n))
 
-template <int P, int B> struct Pow {
+template<int P, int B>
+struct Pow {
   static constexpr uint64_t v = Pow<P - 1, B>::v * B;
 };
 
-template <int B> struct Pow<0, B> { static constexpr uint64_t v = 1; };
+template<int B>
+struct Pow<0, B> {
+  static constexpr uint64_t v = 1;
+};
 
 #define POW(a, b) Pow<(b), (a)>::v
 
 // See: https://www.ibm.com/docs/en/zos/2.4.0?topic=only-variadic-templates-c11
-template <unsigned head, unsigned... tails> struct ColorCode {
+template<unsigned head, unsigned... tails>
+struct ColorCode {
   static constexpr unsigned v = (ColorCode<tails...>::v << 2) ^ (head);
 };
 
-template <unsigned head> struct ColorCode<head> {
+template<unsigned head>
+struct ColorCode<head> {
   static constexpr unsigned v = head;
 };
 
@@ -62,15 +71,18 @@ public:
     LOG(INFO) << "Initialized the prime number table of size " << high;
   }
 
-  ~PrimeNumberGen() { delete notPrime_; }
+  ~PrimeNumberGen() {
+    delete notPrime_;
+  }
 
   struct Itr {
-    bool *ptr = nullptr;
-    const bool *base = nullptr;
-    int operator*() const { return ptr - base; }
-    const Itr &operator++() {
-      while (*++ptr)
-        ;
+    bool* ptr = nullptr;
+    const bool* base = nullptr;
+    int operator*() const {
+      return ptr - base;
+    }
+    const Itr& operator++() {
+      while (*++ptr);
       return *this;
     }
 
@@ -93,8 +105,8 @@ public:
 
   Itr end() const {
     return Itr{
-        .ptr = notPrime_ + high_,
-        .base = notPrime_,
+      .ptr = notPrime_ + high_,
+      .base = notPrime_,
     };
   }
 };
@@ -163,9 +175,9 @@ int getColorsCode(int L, int guess, int solution) {
 std::string toColorSeq(int color, int L) {
   std::string ret;
   const std::vector<std::string> colorStr = {
-      "gray",
-      "yellow",
-      "green",
+    "gray",
+    "yellow",
+    "green",
   };
   for (int i = L - 1; i >= 0; --i) {
     ret += " " + colorStr[(color >> (2 * i)) & 3];
@@ -173,20 +185,18 @@ std::string toColorSeq(int color, int L) {
   return ret;
 }
 
-int remainingSolutions(int L, int guess, int solution,
-                       const std::vector<int> &primes) {
+int remainingSolutions(int L, int guess, int solution, const std::vector<int>& primes) {
   int ret = 0;
   const int targetColor = getColorsCode(L, guess, solution);
   LOG(INFO) << "target " << toColorSeq(targetColor, L) << " with " << solution;
-  int prevS = 0;
+  int prevS = 0; 
   int prevColor = 0;
   int prevBinS = 0;
   const auto binGuess = toBin(guess, L);
   for (auto s : primes) {
     const auto binS = toBin(s, L);
     const auto color = getColorsCode(L, binGuess, binS, prevBinS, prevColor);
-    LOG(INFO) << guess << " " << s << " " << prevS << " "
-              << toColorSeq(prevColor, L) << " = " << toColorSeq(color, L);
+    LOG(INFO) << guess << " " << s << " " << prevS << " " << toColorSeq(prevColor, L) << " = " << toColorSeq(color, L);
     if (color == targetColor) {
       ++ret;
     }
@@ -250,7 +260,7 @@ TEST(PrimeGen, Basic) {
   EXPECT_EQ(8'363, countPrimeN(POW(10, 4), POW(10, 5)));
   EXPECT_EQ(586'081, countPrimeN(POW(10, 6), POW(10, 7)));
 
-  EXPECT_EQ(CC(YELLOW, GRAY, GREEN), (2 << 4) + (1));
+  EXPECT_EQ(CC(YELLOW, GRAY, GREEN), (2<<4) + (1));
 
   {
     auto pr = toBin(610, 3);
@@ -264,8 +274,9 @@ TEST(PrimeGen, Basic) {
   }
 
   const auto expectedColor = CC(YELLOW, GREEN, GRAY, YELLOW);
-  const std::vector<int> numbers = {1733, 2731, 4733, 7039, 7331, 7333,
-                                    7433, 7933, 8731, 9733, 9739};
+  const std::vector<int> numbers = {
+    1733, 2731, 4733, 7039, 7331, 7333, 7433, 7933, 8731, 9733, 9739
+  };
   for (auto p : numbers) {
     CHECK_EQ(getColorsCode(4, 3637, p), expectedColor) << " wrong for " << p;
   }
@@ -281,10 +292,13 @@ TEST(PrimeGen, Basic) {
 }
 
 uint64_t remainingSolutionsForAll(int guessIdx,
-                                  const std::vector<BinAndBM> &primes, int L,
+                                  const std::vector<BinAndBM> &primes,
+                                  int L,
                                   uint64_t upperBound) {
-  int colorToCount[1 << 14] = {0};
-  CHECK_EQ(colorToCount[(1 << 14) - 1], 0);
+  int colorToCount[1<<14] = {
+    0
+  };
+  CHECK_EQ(colorToCount[(1<<14) - 1], 0);
   const auto guess = primes[guessIdx];
   uint64_t ret = primes.size();
   int prevSolution = 0;
@@ -303,7 +317,7 @@ uint64_t remainingSolutionsForAll(int guessIdx,
   return ret;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
@@ -316,7 +330,7 @@ int main(int argc, char *argv[]) {
   PrimeNumberGen pg5(10'000, 100'000);
   PrimeNumberGen pg7(1'000'000, 10'000'000);
 
-  auto solver = [](const PrimeNumberGen &pg, int L) {
+  auto solver =[](const PrimeNumberGen& pg, int L) {
     std::vector<int> rawPrimes;
     std::vector<BinAndBM> primes;
     for (auto p : pg) {
@@ -329,11 +343,11 @@ int main(int argc, char *argv[]) {
     std::vector<uint64_t> sums(primes.size());
     const int numP = primes.size();
     bool threadsOnce[100] = {
-        false,
+      false,
     };
     // compare_exchange_strong( T& expected, T desired )
     std::atomic<uint64_t> minExp(std::numeric_limits<uint64_t>::max());
-#pragma omp parallel for
+    #pragma omp parallel for
     for (int i = 0; i < numP; ++i) {
       const auto sum = remainingSolutionsForAll(i, primes, L, minExp);
       uint64_t updatedMinExp = minExp.load();
@@ -351,8 +365,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numP; ++i) {
       CHECK_LE(minExpV, sums[i]);
       if (minExpV == sums[i]) {
-        std::cout << "=== " << rawPrimes[i] << " : " << 1.0 * minExpV / numP
-                  << std::endl;
+        std::cout << "=== " << rawPrimes[i] << " : " << 1.0 * minExpV / numP << std::endl;
       }
     }
   };
