@@ -100,7 +100,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		for campaignCtx.Err() == nil {
 			logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
-			// This will block until the caller becomes the leader, an error occurs, the context is cancelled.
+			// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
 			err := election.Campaign(campaignCtx, config.ElectionPrefix)
 			if err == nil {
 				logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
