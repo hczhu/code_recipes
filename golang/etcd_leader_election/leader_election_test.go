@@ -155,7 +155,9 @@ func TestYieldingLeadership(t *testing.T) {
 	tc := newTestCluster(t)
 
 	elections := make([]LeaderElection, 0)
-	for i := 0; i < 2; i++ {
+	// TODO: this test is flaky, when numInstances > 2.
+	numInstances := 2
+	for i := 0; i < numInstances; i++ {
 		le, err := StartLeaderElectionAsync(
 			Config{
 				EtcdSessionTTL: 2,
