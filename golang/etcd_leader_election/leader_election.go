@@ -19,7 +19,7 @@ type Config struct {
 	ElectionPrefix	 string
 	EtcdEndpoint string
 	InstanceId string
-
+	// This is used for unit tests only. Don't need to set it for production.
 	EtcdClient *clientv3.Client
 }
 
@@ -32,6 +32,10 @@ type LeaderElection struct {
 
 	CampaignErrorCh <-chan error
 	BecomeLeaderCh <-chan struct{}
+	// A leader can involuntarily lose the leadership if the etcd session expires.
+	// The session expires when the etcd servers don't receive a heartbeat from the client within the session TTL.
+	// This can happen due to different reasons, e.g. there is a network partition between the client and the etcd servers.
+	// The leader doesn't need to proactively send heartbeats to the etcd servers. The etcd client library will do it automatically.
 	LoseLeadershipCh <-chan struct{}
 }
 
