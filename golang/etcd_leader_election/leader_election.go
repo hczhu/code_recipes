@@ -18,6 +18,9 @@ type Config struct {
 	EtcdSessionTTL time.Duration
 	ElectionPrefix	 string
 	EtcdEndpoint string
+	InstanceId string
+
+	EtcdClient *clientv3.Client
 }
 
 type LeaderElection struct {
@@ -25,6 +28,7 @@ type LeaderElection struct {
 	etcdSession *concurrency.Session
 	etcdElection *concurrency.Election
 	cancelCampaign context.CancelFunc
+	instanceId string
 
 	CampaignErrorCh <-chan error
 	BecomeLeaderCh <-chan struct{}
@@ -33,18 +37,30 @@ type LeaderElection struct {
 
 // Will resign the leadership (if the caller is elected) and close the etcd session.
 // "l" will be invalid after this call.
-func (l *LeaderElection) Close(logger log.Logger) {
-	logger.Println("Canceling the campaign...")
+func (l *LeaderElection) Close(logger *log.Logger) {
+	logger.Println(l.instanceId, ": Canceling the campaign...")
 	l.cancelCampaign()
-	logger.Println("Resigning the election...")
+	logger.Println(l.instanceId, ": Resigning the election...")
 	l.etcdElection.Resign(context.Background())
-	logger.Println("Closing the etcd session...")
+	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
-	logger.Println("Closing the etcd client...")
+	logger.Println(l.instanceId, ": Closing the etcd client...")
 	l.etcdClient.Close()
 }
 
-func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection, error){
+func createEtcdClient(etcdEndpoint string) (*clientv3.Client, error) {
+	timeout := time.Duration(5 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	client, err := clientv3.New(clientv3.Config{
+    		Endpoints:   []string{etcdEndpoint},
+    		DialTimeout: timeout,
+    		Context:	 ctx,
+	})	
+	return client, err
+}
+
+func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection, error){
 	toClose := make([]closable, 0)
 	defer func() {
 		for i := int(len(toClose)) - 1; i >= 0; i-- {
@@ -52,17 +68,12 @@ func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection,
 		}	
 	}()
 
-	logger.Println("Establishing connection to etcd...")
-	client, err := func () (*clientv3.Client, error) {
-		timeout := time.Duration(5 * time.Second)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		return clientv3.New(clientv3.Config{
-    		Endpoints:   []string{config.EtcdEndpoint},
-    		DialTimeout: timeout,
-    		Context:	 ctx,
-    	})
-	}()
+	client := config.EtcdClient
+	var err error = nil
+	if client == nil {
+		logger.Printf("Establishing connection to etcd endpoint: %s\n", config.EtcdEndpoint)
+		client, err = createEtcdClient(config.EtcdEndpoint)
+	}
 	if err != nil {
 		logger.Printf("Failed to created an ETCD client with error: %v\n", err)
 		return LeaderElection{}, err
@@ -76,7 +87,7 @@ func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection,
 		int(config.EtcdSessionTTL.Seconds()),
 	))
 	if err != nil {
-		logger.Print("Failed to created an ETCD session with error: %v\n", err)
+		logger.Printf("Failed to created an ETCD session with error: %v\n", err)
 		return LeaderElection{}, err
 	}
 	toClose = append(toClose, session)
@@ -87,15 +98,22 @@ func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection,
 	campaignErrorCh := make(chan error)
 	becomeLeaderCh := make(chan struct{})
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
-		logger.Printf("Obtaining leadership with etcd prefix: %s\n", config.ElectionPrefix)
-	    // This will block until the caller becomes the leader, an error occurs, the context is cancelled.
-		err := election.Campaign(campaignCtx, config.ElectionPrefix)
-		if err == nil {
-	 		logger.Printf("I am the leader with prefix: %s\n", config.ElectionPrefix)
-			becomeLeaderCh <- struct{}{}
-		} else {
-			logger.Printf("Campaign() returned an error: %+v\n", err)
-			campaignErrorCh <- err
+		for campaignCtx.Err() == nil {
+			logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+			// This will block until the caller becomes the leader, an error occurs, the context is cancelled.
+			err := election.Campaign(campaignCtx, config.ElectionPrefix)
+			if err == nil {
+				logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+				becomeLeaderCh <- struct{}{}
+				// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
+				// automatically send heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
+				break
+			} else if campaignCtx.Err() == nil {
+				// When the leader changes, the blocking Campaign() call will return with an error, "lost watcher waiting for delete".
+				// The reason should be the watched key has changed. This is the most common error here.
+				logger.Printf("%s: Campaign() returned an error: %+v. Will retry.\n", config.InstanceId, err)
+				campaignErrorCh <- err
+			}
 		}
 	}(campaignErrorCh, becomeLeaderCh)
 
@@ -105,6 +123,7 @@ func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection,
 		etcdSession: session,
 		etcdElection: election,
 		cancelCampaign: cancelCampaign,
+		instanceId: config.InstanceId,
 
 		CampaignErrorCh: campaignErrorCh,
 		BecomeLeaderCh: becomeLeaderCh,
