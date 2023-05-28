@@ -1,4 +1,4 @@
-package leader_election
+package etcd_leader_election
 
 import (
 	"context"
@@ -12,9 +12,18 @@ import (
 	// clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-
+type closable interface {
+	Close() error
+}
 
 func startLeaderElection(rmConfig *ruleManagerConfig, logger log.Logger) (rmLeaderElection, error){
+	toClose := make([]closable, 0)
+	defer func() {
+		for _, c := range toClose {
+			c.Close()
+		}	
+	}()
+
 	level.Info(logger).Log("msg", "Establishing connection to etcd...")
 	client, err := func () (*clientv3.Client, error) {
 		timeout := time.Duration(5 * time.Second)
