@@ -5,7 +5,6 @@ go 1.20
 require (
 	go.etcd.io/etcd/client/v3 v3.6.0-alpha.0
 	go.etcd.io/etcd/tests/v3 v3.6.0-alpha.0
-	github.com/go-kit/kit/log/level v0.12.0
 )
 
 require (
