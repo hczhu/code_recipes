@@ -3,6 +3,7 @@ package etcd_leader_election
 import (
 	"log"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,6 +38,7 @@ func (tc *testCluster) etcdClient() *clientv3.Client {
 
 func TestSingleCampaign(t *testing.T) {
 	tc := newTestCluster(t)
+	defer tc.close()
 
 	le, err := StartLeaderElectionAsync(
 		Config{
@@ -52,13 +54,13 @@ func TestSingleCampaign(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-le.LoseLeadershipCh:
+	case <-le.AnyErrorCh:
 		t.Error("should have become leader")
 	}
 
 	time.Sleep(5 * time.Second)
 	select {
-	case <-le.LoseLeadershipCh:
+	case <-le.AnyErrorCh:
 		t.Error("should have kept leadership")
 	case <-time.After(10 * time.Second):
 		break
@@ -66,7 +68,7 @@ func TestSingleCampaign(t *testing.T) {
 	le.Close(log.Default())
 
 	select {
-	case <-le.LoseLeadershipCh:
+	case <-le.AnyErrorCh:
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have lost leadership")
@@ -75,6 +77,7 @@ func TestSingleCampaign(t *testing.T) {
 }
 func TestLongLivedLeader(t *testing.T) {
 	tc := newTestCluster(t)
+	defer tc.close()
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
@@ -92,7 +95,7 @@ func TestLongLivedLeader(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-leader.LoseLeadershipCh:
+	case <-leader.AnyErrorCh:
 		t.Error("should have become leader")
 	}
 
@@ -112,7 +115,7 @@ func TestLongLivedLeader(t *testing.T) {
 	}()
 
 	select {
-	case <-leader.LoseLeadershipCh:
+	case <-leader.AnyErrorCh:
 		t.Error("should have kept leadership")
 	case <-time.After(10 * time.Second):
 		break
@@ -120,6 +123,7 @@ func TestLongLivedLeader(t *testing.T) {
 }
 func TestMultipleCampaigns(t *testing.T) {
 	tc := newTestCluster(t)
+	defer tc.close()
 
 	elections := make([]LeaderElection, 0)
 	for i := 0; i < 3; i++ {
@@ -153,10 +157,10 @@ func TestMultipleCampaigns(t *testing.T) {
 }
 func TestYieldingLeadership(t *testing.T) {
 	tc := newTestCluster(t)
+	defer tc.close()
 
 	elections := make([]LeaderElection, 0)
-	// TODO: this test is flaky, when numInstances > 2.
-	numInstances := 2
+	numInstances := 3
 	for i := 0; i < numInstances; i++ {
 		le, err := StartLeaderElectionAsync(
 			Config{
@@ -171,7 +175,6 @@ func TestYieldingLeadership(t *testing.T) {
 		assert.NotNil(t, le)
 		elections = append(elections, le)
 	}
-	time.Sleep(time.Second * 5)
 	isClosed := make([]bool, len(elections))
 	for _ = range elections {
 		leaders := 0
@@ -184,7 +187,7 @@ func TestYieldingLeadership(t *testing.T) {
 			case <-le.BecomeLeaderCh:
 				leaders++
 				leaderIdx = i
-			case <-time.After(5 * time.Second):
+			case <-time.After(3 * time.Second):
 			}
 		}
 		assert.Equal(t, 1, leaders)
@@ -192,12 +195,13 @@ func TestYieldingLeadership(t *testing.T) {
 		elections[leaderIdx].Close(log.Default())
 		isClosed[leaderIdx] = true
 		log.Default().Println("closed leader", leaderIdx)
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 3)
 	}
 	tc.close()
 }
 func TestLeaderDeath(t *testing.T) {
 	tc := newTestCluster(t)
+	defer tc.close()
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
@@ -215,7 +219,7 @@ func TestLeaderDeath(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-leader.LoseLeadershipCh:
+	case <-leader.AnyErrorCh:
 		t.Error("should have become leader")
 	}
 
@@ -242,10 +246,60 @@ func TestLeaderDeath(t *testing.T) {
 	}()
 	leader.etcdSession.Close()
 	select {
-	case <-leader.LoseLeadershipCh:
+	case <-leader.AnyErrorCh:
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have lost leadership after session closed")
 	}
 	<-syncCh
+}
+func TestConcurrentCampaigns(t *testing.T) {
+	tc := newTestCluster(t)
+	defer tc.close()
+
+	leaderCh := make(chan *LeaderElection)
+	cl1 := tc.etcdClient()
+	cl2 := tc.etcdClient()
+	process := func(instaceId string, cl *clientv3.Client) {
+		le, err := StartLeaderElectionAsync(
+			Config{
+				EtcdSessionTTL: 2,
+				ElectionPrefix: "TestConcurrentCampaigns",
+				EtcdClient: cl,
+				InstanceId: instaceId,
+			},
+			log.Default(),
+		)
+		require.NoError(t, err)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := <-le.AnyErrorCh
+			le.AnyErrorCh <- err
+		}()
+		
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case <-le.BecomeLeaderCh:
+				log.Default().Println("became leader: ", instaceId)
+				leaderCh <- &le
+				le.BecomeLeaderCh <- struct{}{}
+			case err := <-le.AnyErrorCh:
+				le.AnyErrorCh <- err
+			}
+		}()
+		wg.Wait()
+	}
+
+	go process("one", cl1)
+	go process("two", cl2)
+
+	leader1 := <-leaderCh
+	leader1.Close(log.Default())
+
+	leader2 := <-leaderCh
+	leader2.Close(log.Default())
 }

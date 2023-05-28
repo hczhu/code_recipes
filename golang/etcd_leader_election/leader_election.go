@@ -2,7 +2,9 @@ package etcd_leader_election
 
 import (
 	"context"
+	"errors"
 	"log"
+	"sync/atomic"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -29,27 +31,40 @@ type LeaderElection struct {
 	etcdElection *concurrency.Election
 	cancelCampaign context.CancelFunc
 	instanceId string
+	isClosed atomic.Bool
+	dontCloseEtcdClient bool
 
-	CampaignErrorCh <-chan error
-	BecomeLeaderCh <-chan struct{}
-	// A leader can involuntarily lose the leadership if the etcd session expires.
-	// The session expires when the etcd servers don't receive a heartbeat from the client within the session TTL.
-	// This can happen due to different reasons, e.g. there is a network partition between the client and the etcd servers.
+	// Once a caller is elected as a leader, it will receive a message on this channel.
+	// The leader won't involuntarily lose the leadership as long as its etcd session is valid.
+	// A session expires when the etcd servers don't receive a heartbeat from the client within the session TTL.
 	// The leader doesn't need to proactively send heartbeats to the etcd servers. The etcd client library will do it automatically.
-	LoseLeadershipCh <-chan struct{}
+	// Buffer size = 1
+	BecomeLeaderCh chan struct{}
+	// An error can happen before or after the caller becomes a leader.
+	// If an error happens before the caller becomes a leader, the caller will never become a leader.
+	// If an error happens after the caller becomes a leader, the caller is not the leader anymore.
+	// When an error happens, the caller should close the LeaderElection object.
+	// Buffer size = 1
+	AnyErrorCh chan error
 }
 
 // Will resign the leadership (if the caller is elected) and close the etcd session.
 // "l" will be invalid after this call.
 func (l *LeaderElection) Close(logger *log.Logger) {
+	if l.isClosed.Swap(true) {
+		logger.Println(l.instanceId, ": Already closed.")
+		return 
+	}
 	logger.Println(l.instanceId, ": Canceling the campaign...")
 	l.cancelCampaign()
 	logger.Println(l.instanceId, ": Resigning the election...")
 	l.etcdElection.Resign(context.Background())
 	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
-	logger.Println(l.instanceId, ": Closing the etcd client...")
-	l.etcdClient.Close()
+	if !l.dontCloseEtcdClient {
+		logger.Println(l.instanceId, ": Closing the etcd client...")
+	    l.etcdClient.Close()
+	}
 }
 
 func createEtcdClient(etcdEndpoint string) (*clientv3.Client, error) {
@@ -73,10 +88,12 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	}()
 
 	client := config.EtcdClient
+	dontCloseEtcdClient := true
 	var err error = nil
 	if client == nil {
 		logger.Printf("Establishing connection to etcd endpoint: %s\n", config.EtcdEndpoint)
 		client, err = createEtcdClient(config.EtcdEndpoint)
+		dontCloseEtcdClient = false
 	}
 	if err != nil {
 		logger.Printf("Failed to created an ETCD client with error: %v\n", err)
@@ -99,28 +116,26 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 
 	election := concurrency.NewElection(session, config.ElectionPrefix)
 	campaignCtx, cancelCampaign := context.WithCancel(context.Background())
-	campaignErrorCh := make(chan error)
-	becomeLeaderCh := make(chan struct{})
+	becomeLeaderCh := make(chan struct{}, 1)
+	anyErrorCh := make(chan error, 1)
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
-		// Keep retrying on any error until the context is cancelled.
-		for campaignCtx.Err() == nil {
-			logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
-			// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
-			err := election.Campaign(campaignCtx, config.ElectionPrefix)
-			if err == nil {
-				logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
-				becomeLeaderCh <- struct{}{}
-				// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
-				// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
-				break
-			} else if campaignCtx.Err() == nil {
-				// When the leader changes, the blocking Campaign() call will return with an error, "lost watcher waiting for delete".
-				// The reason should be the watched key has changed. This is the most common error here.
-				logger.Printf("%s: Campaign() returned an error: %+v. Will retry.\n", config.InstanceId, err)
-				campaignErrorCh <- err
-			}
+		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
+		err := election.Campaign(campaignCtx, config.ElectionPrefix)
+		if err == nil {
+			logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
+			// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
+			becomeLeaderCh <- struct{}{}
+			logger.Printf("%s: Waiting for session done.\n", config.InstanceId)
+			<-session.Done()
+			logger.Printf("%s: The session is done. I am not the leader anymore for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+			anyErrorCh <- errors.New("the session is done. I am not the leader anymore")
+		} else {
+			logger.Printf("%s: Campaign() returned an error: %+v.\n", config.InstanceId, err)
+			anyErrorCh <- err
 		}
-	}(campaignErrorCh, becomeLeaderCh)
+	}(anyErrorCh, becomeLeaderCh)
 
 	toClose = toClose[:0]
 	return LeaderElection{
@@ -129,10 +144,11 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		etcdElection: election,
 		cancelCampaign: cancelCampaign,
 		instanceId: config.InstanceId,
+		isClosed: atomic.Bool{},
+		dontCloseEtcdClient: dontCloseEtcdClient,
 
-		CampaignErrorCh: campaignErrorCh,
 		BecomeLeaderCh: becomeLeaderCh,
-		LoseLeadershipCh: session.Done(),
+		AnyErrorCh: anyErrorCh,
 	}, nil
 }
  
