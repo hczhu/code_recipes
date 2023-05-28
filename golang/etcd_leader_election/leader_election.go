@@ -5,9 +5,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/go-kit/log/level"
 	_ "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 	_ "go.etcd.io/etcd/client/v3/concurrency"
+	"go.etcd.io/etcd/clientv3"
 	_ "go.etcd.io/etcd/tests/v3/framework/integration"
 	// clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -16,7 +18,13 @@ type closable interface {
 	Close() error
 }
 
-func startLeaderElection(rmConfig *ruleManagerConfig, logger log.Logger) (rmLeaderElection, error){
+type Config struct {
+}
+
+type LeaderElection struct {
+}
+
+func CampaignAsync(config Config, logger log.Logger) (rmLeaderElection, error){
 	toClose := make([]closable, 0)
 	defer func() {
 		for _, c := range toClose {
