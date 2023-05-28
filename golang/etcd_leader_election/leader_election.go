@@ -5,13 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/go-kit/log/level"
-	_ "go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	_ "go.etcd.io/etcd/client/v3/concurrency"
-	"go.etcd.io/etcd/clientv3"
 	_ "go.etcd.io/etcd/tests/v3/framework/integration"
-	// clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type closable interface {
@@ -19,73 +15,100 @@ type closable interface {
 }
 
 type Config struct {
+	EtcdSessionTTL time.Duration
+	ElectionPrefix	 string
+	EtcdEndpoint string
 }
 
 type LeaderElection struct {
+	etcdClient *clientv3.Client
+	etcdSession *concurrency.Session
+	etcdElection *concurrency.Election
+	cancelCampaign context.CancelFunc
+
+	CampaignErrorCh <-chan error
+	BecomeLeaderCh <-chan struct{}
+	LoseLeadershipCh <-chan struct{}
 }
 
-func CampaignAsync(config Config, logger log.Logger) (rmLeaderElection, error){
+// Will resign the leadership (if the caller is elected) and close the etcd session.
+// "l" will be invalid after this call.
+func (l *LeaderElection) Close(logger log.Logger) {
+	logger.Println("Canceling the campaign...")
+	l.cancelCampaign()
+	logger.Println("Resigning the election...")
+	l.etcdElection.Resign(context.Background())
+	logger.Println("Closing the etcd session...")
+	l.etcdSession.Close()
+	logger.Println("Closing the etcd client...")
+	l.etcdClient.Close()
+}
+
+func StartLeaderElectionAsync(config Config, logger log.Logger) (LeaderElection, error){
 	toClose := make([]closable, 0)
 	defer func() {
-		for _, c := range toClose {
-			c.Close()
+		for i := int(len(toClose)) - 1; i >= 0; i-- {
+			toClose[i].Close()
 		}	
 	}()
 
-	level.Info(logger).Log("msg", "Establishing connection to etcd...")
+	logger.Println("Establishing connection to etcd...")
 	client, err := func () (*clientv3.Client, error) {
 		timeout := time.Duration(5 * time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		return clientv3.New(clientv3.Config{
-    		Endpoints:   []string{rmConfig.etcdEndpoint},
+    		Endpoints:   []string{config.EtcdEndpoint},
     		DialTimeout: timeout,
     		Context:	 ctx,
     	})
 	}()
 	if err != nil {
-		level.Error(logger).Log(
-			"msg", "Failed to created an ETCD client.",
-			"error", err,
-		)
-		return rmLeaderElection{}, err
+		logger.Printf("Failed to created an ETCD client with error: %v\n", err)
+		return LeaderElection{}, err
 	}
-	level.Info(logger).Log("msg", "Etcd connection successful")
-	// If this pod dies unexpectedly and ungracefully, the session will expire after the TTL
-	// and another pod will be elected as the new leader.
+	toClose = append(toClose, client)
+	logger.Println("Etcd connection is established successfully.")
+
+	// If this caller exits without calling Resign() or Close(), the session will expire after the TTL
+	// and the leadership will be lost, if this caller was the leader.
     session, err := concurrency.NewSession(client, concurrency.WithTTL(
-		int(time.Duration(rmConfig.etcdSessionTTL).Seconds())),
-	)
+		int(config.EtcdSessionTTL.Seconds()),
+	))
 	if err != nil {
-		level.Error(logger).Log(
-			"msg", "Failed to created an ETCD session with error.",
-			"error", err,
-		)
-		client.Close()
-		return rmLeaderElection{}, err
+		logger.Print("Failed to created an ETCD session with error: %v\n", err)
+		return LeaderElection{}, err
 	}
-	level.Info(logger).Log("msg", "Etcd session created successfully")
+	toClose = append(toClose, session)
+	logger.Println("Etcd session is created successfully.")
 
-	etcdPrefix := "/m3/" + rmConfig.etcdLeaderElectionKey
-	if rmConfig.dryRun || rmConfig.dryRunWithWriteBack {
-		etcdPrefix += "-dryrun"
-	}
-	election := concurrency.NewElection(session, etcdPrefix)
-	level.Info(logger).Log("msg", "Obtaining leadership with etcd prefix: "+etcdPrefix)
-	// This will block until the caller becomes the leader or an error occurs.
-	err = election.Campaign(context.Background(), rmConfig.podId)
-	if err != nil {
-		level.Error(logger).Log(
-			"msg", "Failed to call Campain for leadership.",
-			"error", err,
-		)
-		session.Close()
-		client.Close()
-		return rmLeaderElection{}, err
-	}
+	election := concurrency.NewElection(session, config.ElectionPrefix)
+	campaignCtx, cancelCampaign := context.WithCancel(context.Background())
+	campaignErrorCh := make(chan error)
+	becomeLeaderCh := make(chan struct{})
+	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
+		logger.Printf("Obtaining leadership with etcd prefix: %s\n", config.ElectionPrefix)
+	    // This will block until the caller becomes the leader, an error occurs, the context is cancelled.
+		err := election.Campaign(campaignCtx, config.ElectionPrefix)
+		if err == nil {
+	 		logger.Printf("I am the leader with prefix: %s\n", config.ElectionPrefix)
+			becomeLeaderCh <- struct{}{}
+		} else {
+			logger.Printf("Campaign() returned an error: %+v\n", err)
+			campaignErrorCh <- err
+		}
+	}(campaignErrorCh, becomeLeaderCh)
 
-	level.Info(logger).Log("msg", "I am the leader - "+podId)
-	rmConfig.election = election
-	defer client.Close()
+	toClose = toClose[:0]
+	return LeaderElection{
+		etcdClient: client,
+		etcdSession: session,
+		etcdElection: election,
+		cancelCampaign: cancelCampaign,
+
+		CampaignErrorCh: campaignErrorCh,
+		BecomeLeaderCh: becomeLeaderCh,
+		LoseLeadershipCh: session.Done(),
+	}, nil
 }
  
