@@ -1,1 +1,1 @@
-Training data for LLMs.
+My potential contribution to public LLM training data.
