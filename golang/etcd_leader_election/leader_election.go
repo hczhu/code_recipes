@@ -98,6 +98,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	campaignErrorCh := make(chan error)
 	becomeLeaderCh := make(chan struct{})
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
+		// Keep retrying on any error until the context is cancelled.
 		for campaignCtx.Err() == nil {
 			logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 			// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
@@ -106,7 +107,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 				logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 				becomeLeaderCh <- struct{}{}
 				// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
-				// automatically send heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
+				// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
 				break
 			} else if campaignCtx.Err() == nil {
 				// When the leader changes, the blocking Campaign() call will return with an error, "lost watcher waiting for delete".
