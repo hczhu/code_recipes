@@ -34,18 +34,17 @@ type LeaderElection struct {
 	isClosed atomic.Bool
 	dontCloseEtcdClient bool
 
-	// Once a caller is elected as a leader, it will receive a message on this channel.
+	// Once a caller is elected as a leader, this channel will be closed.
 	// The leader won't involuntarily lose the leadership as long as its etcd session is valid.
 	// A session expires when the etcd servers don't receive a heartbeat from the client within the session TTL.
 	// The leader doesn't need to proactively send heartbeats to the etcd servers. The etcd client library will do it automatically.
-	// Buffer size = 1
 	BecomeLeaderCh chan struct{}
 	// An error can happen before or after the caller becomes a leader.
 	// If an error happens before the caller becomes a leader, the caller will never become a leader.
 	// If an error happens after the caller becomes a leader, the caller is not the leader anymore.
-	// When an error happens, the caller should close the LeaderElection object.
-	// Buffer size = 1
-	AnyErrorCh chan error
+	// When an error happens, the LeaderElection object becomes invalid and should be closed.
+	// Note that LeaderElection.Close() also causes an error.
+	ErrorCh chan error
 }
 
 // Will resign the leadership (if the caller is elected) and close the etcd session.
@@ -116,8 +115,8 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 
 	election := concurrency.NewElection(session, config.ElectionPrefix)
 	campaignCtx, cancelCampaign := context.WithCancel(context.Background())
-	becomeLeaderCh := make(chan struct{}, 1)
-	anyErrorCh := make(chan error, 1)
+	becomeLeaderCh := make(chan struct{})
+	anyErrorCh := make(chan error)
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
@@ -126,7 +125,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 			logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
 			// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
-			becomeLeaderCh <- struct{}{}
+			close(becomeLeaderCh)
 			logger.Printf("%s: Waiting for session done.\n", config.InstanceId)
 			<-session.Done()
 			logger.Printf("%s: The session is done. I am not the leader anymore for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
@@ -148,7 +147,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		dontCloseEtcdClient: dontCloseEtcdClient,
 
 		BecomeLeaderCh: becomeLeaderCh,
-		AnyErrorCh: anyErrorCh,
+		ErrorCh: anyErrorCh,
 	}, nil
 }
  

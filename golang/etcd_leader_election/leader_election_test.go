@@ -54,13 +54,13 @@ func TestSingleCampaign(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-le.AnyErrorCh:
+	case <-le.ErrorCh:
 		t.Error("should have become leader")
 	}
 
 	time.Sleep(5 * time.Second)
 	select {
-	case <-le.AnyErrorCh:
+	case <-le.ErrorCh:
 		t.Error("should have kept leadership")
 	case <-time.After(10 * time.Second):
 		break
@@ -68,7 +68,7 @@ func TestSingleCampaign(t *testing.T) {
 	le.Close(log.Default())
 
 	select {
-	case <-le.AnyErrorCh:
+	case <-le.ErrorCh:
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have lost leadership")
@@ -95,11 +95,16 @@ func TestLongLivedLeader(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-leader.AnyErrorCh:
+	case <-leader.ErrorCh:
 		t.Error("should have become leader")
 	}
 
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		follower, err := StartLeaderElectionAsync(
 			Config{
 				EtcdSessionTTL: 2,
@@ -111,11 +116,16 @@ func TestLongLivedLeader(t *testing.T) {
 		)
 		require.NoError(t, err)
 		defer follower.Close(log.Default())
-		time.Sleep(10 * time.Second)
+		select {
+		case <-follower.BecomeLeaderCh:
+			t.Error("shouldn't got leadership")
+		case <-time.After(10 * time.Second):
+			break
+		}
 	}()
 
 	select {
-	case <-leader.AnyErrorCh:
+	case <-leader.ErrorCh:
 		t.Error("should have kept leadership")
 	case <-time.After(10 * time.Second):
 		break
@@ -153,7 +163,6 @@ func TestMultipleCampaigns(t *testing.T) {
 	for _, le := range elections {
 		le.Close(log.Default())
 	}
-	tc.close()
 }
 func TestYieldingLeadership(t *testing.T) {
 	tc := newTestCluster(t)
@@ -219,7 +228,7 @@ func TestLeaderDeath(t *testing.T) {
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have become leader")
-	case <-leader.AnyErrorCh:
+	case <-leader.ErrorCh:
 		t.Error("should have become leader")
 	}
 
@@ -246,7 +255,7 @@ func TestLeaderDeath(t *testing.T) {
 	}()
 	leader.etcdSession.Close()
 	select {
-	case <-leader.AnyErrorCh:
+	case <-leader.ErrorCh:
 		break
 	case <-time.After(5 * time.Second):
 		t.Error("should have lost leadership after session closed")
@@ -275,8 +284,8 @@ func TestConcurrentCampaigns(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := <-le.AnyErrorCh
-			le.AnyErrorCh <- err
+			err := <-le.ErrorCh
+			le.ErrorCh <- err
 		}()
 		
 		wg.Add(1)
@@ -286,9 +295,8 @@ func TestConcurrentCampaigns(t *testing.T) {
 			case <-le.BecomeLeaderCh:
 				log.Default().Println("became leader: ", instaceId)
 				leaderCh <- &le
-				le.BecomeLeaderCh <- struct{}{}
-			case err := <-le.AnyErrorCh:
-				le.AnyErrorCh <- err
+			case err := <-le.ErrorCh:
+				le.ErrorCh <- err
 			}
 		}()
 		wg.Wait()
