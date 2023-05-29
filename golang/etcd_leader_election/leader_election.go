@@ -9,7 +9,6 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	_ "go.etcd.io/etcd/tests/v3/framework/integration"
 )
 
 type closable interface {
@@ -20,6 +19,7 @@ type Config struct {
 	EtcdSessionTTL time.Duration
 	ElectionPrefix	 string
 	EtcdEndpoint string
+	// This is used as the value of the ETCD leader election key for the caller and also logging.
 	InstanceId string
 	// This is used for unit tests only. Don't need to set it for production.
 	EtcdClient *clientv3.Client
@@ -121,7 +121,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
-		err := election.Campaign(campaignCtx, config.ElectionPrefix)
+		err := election.Campaign(campaignCtx, config.InstanceId)
 		if err == nil {
 			logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
