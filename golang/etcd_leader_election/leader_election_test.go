@@ -151,7 +151,7 @@ func TestMultipleCampaigns(t *testing.T) {
 		elections = append(elections, le)
 	}
 	leaders := 0
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
 	for _, le := range elections {
 		select {
 		case <-le.BecomeLeaderCh:
