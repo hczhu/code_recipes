@@ -9,7 +9,6 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	_ "go.etcd.io/etcd/tests/v3/framework/integration"
 )
 
 type closable interface {
