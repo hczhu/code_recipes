@@ -320,3 +320,44 @@ func TestConcurrentCampaigns(t *testing.T) {
 	}
 	leader2.Close(log.Default())
 }
+
+func TestBlocingWait(t *testing.T) {
+	tc := newTestCluster(t)
+	defer tc.close()
+
+	electionParticipants := make([]*LeaderElection, 0)
+	leaderCh := make(chan *LeaderElection)
+	cl1 := tc.etcdClient()
+	cl2 := tc.etcdClient()
+	cl3 := tc.etcdClient()
+
+	process := func(instaceId string, cl *clientv3.Client) {
+		le, err := StartLeaderElectionAsync(
+			Config{
+				EtcdSessionTTL: 2,
+				ElectionPrefix: "TestBlocingWait",
+				EtcdClient: cl,
+				InstanceId: instaceId,
+			},
+			log.Default(),
+		)
+		electionParticipants = append(electionParticipants, &le)
+		require.NoError(t, err)
+		if le.BlockingWaitForLeadership() {
+			leaderCh <- &le
+		}
+	}
+
+	go process("one", cl1)
+	go process("two", cl2)
+	go process("three", cl3)
+
+	leader1 := <-leaderCh
+	leader1.Close(log.Default())
+
+	leader2 := <-leaderCh
+	for _, cl := range electionParticipants {
+		cl.Close(log.Default())
+	}
+	leader2.Close(log.Default())
+}

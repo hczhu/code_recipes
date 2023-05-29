@@ -33,6 +33,7 @@ type LeaderElection struct {
 	instanceId string
 	isClosed atomic.Bool
 	dontCloseEtcdClient bool
+	cancelCh chan struct{}
 
 	// Once a caller is elected as a leader, this channel will be closed.
 	// The leader won't involuntarily lose the leadership as long as its etcd session is valid.
@@ -43,12 +44,30 @@ type LeaderElection struct {
 	// If an error happens before the caller becomes a leader, the caller will never become a leader.
 	// If an error happens after the caller becomes a leader, the caller is not the leader anymore.
 	// When an error happens, the LeaderElection object becomes invalid and should be closed.
-	// Note that LeaderElection.Close() also causes an error.
+	// NB: LeaderElection.Close() also causes an error.
 	ErrorCh chan error
 }
 
+// Return true if the caller becomes the leader.
+// Return false if any error happens.
+// After an error, the LeaderElection object becomes invalid and should be closed.
+// This method can be called concurrently.
+func (l *LeaderElection) BlockingWaitForLeadership() bool {
+	if l.isClosed.Load() {
+		return false
+	}
+	select {
+	case<-l.BecomeLeaderCh:
+		return true
+	case<-l.cancelCh:
+		return false
+	}
+}
+
+
 // Will resign the leadership (if the caller is elected) and close the etcd session.
-// "l" will be invalid after this call.
+// The LeaderLelection object will be invalid after this call.
+// Close() must be called if the caller doesn't want to be the leader anymore.
 func (l *LeaderElection) Close(logger *log.Logger) {
 	if l.isClosed.Swap(true) {
 		logger.Println(l.instanceId, ": Already closed.")
@@ -78,6 +97,7 @@ func createEtcdClient(etcdEndpoint string) (*clientv3.Client, error) {
 	return client, err
 }
 
+// Call LeaderElection.Close() to cancel the election participation or yield the leadership.
 func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection, error){
 	toClose := make([]closable, 0)
 	defer func() {
@@ -116,7 +136,8 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	election := concurrency.NewElection(session, config.ElectionPrefix)
 	campaignCtx, cancelCampaign := context.WithCancel(context.Background())
 	becomeLeaderCh := make(chan struct{})
-	anyErrorCh := make(chan error)
+	errorCh := make(chan error)
+	cancelCh := make(chan struct{})
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
@@ -129,12 +150,14 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 			logger.Printf("%s: Waiting for session done.\n", config.InstanceId)
 			<-session.Done()
 			logger.Printf("%s: The session is done. I am not the leader anymore for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
-			anyErrorCh <- errors.New("the session is done. I am not the leader anymore")
+			errorCh <- errors.New("the session is done. I am not the leader anymore")
+			close(cancelCh)
 		} else {
 			logger.Printf("%s: Campaign() returned an error: %+v.\n", config.InstanceId, err)
-			anyErrorCh <- err
+			errorCh <- err
+			close(cancelCh)
 		}
-	}(anyErrorCh, becomeLeaderCh)
+	}(errorCh, becomeLeaderCh)
 
 	toClose = toClose[:0]
 	return LeaderElection{
@@ -145,9 +168,10 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		instanceId: config.InstanceId,
 		isClosed: atomic.Bool{},
 		dontCloseEtcdClient: dontCloseEtcdClient,
+		cancelCh: cancelCh,
 
 		BecomeLeaderCh: becomeLeaderCh,
-		ErrorCh: anyErrorCh,
+		ErrorCh: errorCh,
 	}, nil
 }
  
