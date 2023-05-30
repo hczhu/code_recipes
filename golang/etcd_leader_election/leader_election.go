@@ -31,9 +31,9 @@ type LeaderElection struct {
 	etcdElection *concurrency.Election
 	cancelCampaign context.CancelFunc
 	instanceId string
-	isClosed atomic.Bool
+	isClosed *atomic.Bool
 	clientCreationCancel context.CancelFunc
-	shouldCloseEtcdClient bool
+	shouldCloseEtcdClient *atomic.Bool
 	cancelCh chan struct{}
 
 	// Once a caller is elected as a leader, this channel will be closed.
@@ -81,7 +81,7 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 	l.etcdElection.Resign(context.Background())
 	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
-	if l.shouldCloseEtcdClient {
+	if l.shouldCloseEtcdClient.Load() {
 		logger.Println(l.instanceId, ": Closing the etcd client...")
 		l.clientCreationCancel()
 	    l.etcdClient.Close()
@@ -169,14 +169,16 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	}(errorCh, becomeLeaderCh)
 
 	toClose = toClose[:0]
+	shouldCloseEtcdClientAtomic := atomic.Bool{}
+	shouldCloseEtcdClientAtomic.Store(shouldCloseEtcdClient)
 	return LeaderElection{
 		etcdClient: client,
 		etcdSession: session,
 		etcdElection: election,
 		cancelCampaign: cancelCampaign,
 		instanceId: config.InstanceId,
-		isClosed: atomic.Bool{},
-		shouldCloseEtcdClient: shouldCloseEtcdClient,
+		isClosed: &atomic.Bool{},
+		shouldCloseEtcdClient: &shouldCloseEtcdClientAtomic,
 		clientCreationCancel: clientCreationCancel,
 		cancelCh: cancelCh,
 
