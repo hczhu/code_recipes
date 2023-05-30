@@ -50,7 +50,10 @@ func TestDialTimeout(t *testing.T) {
 
 func TestSingleCampaign(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	le, err := StartLeaderElectionAsync(
 		Config{
@@ -88,7 +91,10 @@ func TestSingleCampaign(t *testing.T) {
 }
 func TestLongLivedLeader(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
@@ -146,7 +152,10 @@ func TestLongLivedLeader(t *testing.T) {
 }
 func TestMultipleCampaigns(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	elections := make([]LeaderElection, 0)
 	for i := 0; i < 3; i++ {
@@ -179,7 +188,10 @@ func TestMultipleCampaigns(t *testing.T) {
 }
 func TestYieldingLeadership(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	elections := make([]LeaderElection, 0)
 	numInstances := 3
@@ -199,6 +211,7 @@ func TestYieldingLeadership(t *testing.T) {
 	}
 	isClosed := make([]bool, len(elections))
 	for range elections {
+		time.Sleep(time.Second * 3)
 		leaders := 0
 		leaderIdx := -1
 		for i, le := range elections {
@@ -217,13 +230,14 @@ func TestYieldingLeadership(t *testing.T) {
 		elections[leaderIdx].Close(log.Default())
 		isClosed[leaderIdx] = true
 		log.Default().Println("closed leader", leaderIdx)
-		time.Sleep(time.Second * 3)
 	}
-	log.Default().Println("Closing the cluser")
 }
 func TestLeaderDeath(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
@@ -277,7 +291,10 @@ func TestLeaderDeath(t *testing.T) {
 }
 func TestConcurrentCampaigns(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	electionParticipants := make([]*LeaderElection, 0)
 	leaderCh := make(chan *LeaderElection)
@@ -336,7 +353,10 @@ func TestConcurrentCampaigns(t *testing.T) {
 
 func TestBlockingWait(t *testing.T) {
 	tc := newTestCluster(t)
-	defer tc.close()
+	defer func () {
+		log.Default().Println("Closing the cluster")
+		tc.close()
+	}()
 
 	electionParticipants := make([]*LeaderElection, 0)
 	leaderCh := make(chan *LeaderElection)

@@ -46,6 +46,7 @@ type LeaderElection struct {
 	// If an error happens after the caller becomes a leader, the caller is not the leader anymore.
 	// When an error happens, the LeaderElection object becomes invalid and should be closed.
 	// NB: LeaderElection.Close() also causes an error.
+	// NB: only one error will be sent to this channel.
 	ErrorCh chan error
 }
 
@@ -156,11 +157,13 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 			errorCh <- errors.New("the session is done. I am not the leader anymore")
 			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
+			close(errorCh)
 		} else {
 			logger.Printf("%s: Campaign() returned an error: %+v.\n", config.InstanceId, err)
 			errorCh <- err
 			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
+			close(errorCh)
 		}
 		logger.Printf("%s: Campaign go routine exit.\n", config.InstanceId)
 	}(errorCh, becomeLeaderCh)
@@ -181,4 +184,3 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		ErrorCh: errorCh,
 	}, nil
 }
- 
