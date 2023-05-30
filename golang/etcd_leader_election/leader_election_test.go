@@ -296,8 +296,8 @@ func TestConcurrentCampaigns(t *testing.T) {
 		tc.close()
 	}()
 
-	electionParticipants := make(chan *LeaderElection)
-	leaderCh := make(chan *LeaderElection)
+	electionParticipants := make(chan *LeaderElection, 3)
+	leaderCh := make(chan *LeaderElection, 3)
 	cl1 := tc.etcdClient()
 	cl2 := tc.etcdClient()
 	cl3 := tc.etcdClient()
@@ -315,13 +315,14 @@ func TestConcurrentCampaigns(t *testing.T) {
 		require.NoError(t, err)
 		var wg sync.WaitGroup
 		defer wg.Wait()
-		wg.Add(1)
+
 		cancelCh := make(chan struct{})
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			err := <-le.ErrorCh
 			log.Default().Println("Election error: ", err)
-			cancelCh <- struct{}{}
+			close(cancelCh)
 		}()
 		
 		wg.Add(1)
@@ -345,7 +346,8 @@ func TestConcurrentCampaigns(t *testing.T) {
 	leader1.Close(log.Default())
 
 	leader2 := <-leaderCh
-	for el := range electionParticipants {
+	for i := 0; i < 3; i++ {
+		el := <- electionParticipants
 		el.Close(log.Default())
 	}
 	leader2.Close(log.Default())
@@ -358,8 +360,8 @@ func TestBlockingWait(t *testing.T) {
 		tc.close()
 	}()
 
-	electionParticipants := make([]*LeaderElection, 0)
-	leaderCh := make(chan *LeaderElection)
+	electionParticipants := make(chan *LeaderElection, 3)
+	leaderCh := make(chan *LeaderElection, 3)
 	cl1 := tc.etcdClient()
 	cl2 := tc.etcdClient()
 	cl3 := tc.etcdClient()
@@ -374,7 +376,7 @@ func TestBlockingWait(t *testing.T) {
 			},
 			log.Default(),
 		)
-		electionParticipants = append(electionParticipants, &le)
+		electionParticipants <- &le
 		require.NoError(t, err)
 		if le.BlockingWaitForLeadership() {
 			leaderCh <- &le
@@ -389,8 +391,9 @@ func TestBlockingWait(t *testing.T) {
 	leader1.Close(log.Default())
 
 	leader2 := <-leaderCh
-	for _, cl := range electionParticipants {
-		cl.Close(log.Default())
+	for i := 0; i < 3; i++ {
+		el := <- electionParticipants
+		el.Close(log.Default())
 	}
 	leader2.Close(log.Default())
 }

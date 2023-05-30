@@ -76,9 +76,13 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 		return 
 	}
 	logger.Println(l.instanceId, ": Canceling the campaign...")
+	// This will resign the leadership if the caller is already the leader but still in Campaign().
 	l.cancelCampaign()
-	logger.Println(l.instanceId, ": Resigning the election...")
-	l.etcdElection.Resign(context.Background())
+	if _, ok := <-l.BecomeLeaderCh; !ok {
+		// Already became the leader.
+		logger.Println(l.instanceId, ": Resigning the leadership...")
+		l.etcdElection.Resign(context.Background())
+	}
 	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
 	if l.shouldCloseEtcdClient.Load() {
