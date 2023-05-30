@@ -296,7 +296,7 @@ func TestConcurrentCampaigns(t *testing.T) {
 		tc.close()
 	}()
 
-	electionParticipants := make([]*LeaderElection, 0)
+	electionParticipants := make(chan *LeaderElection)
 	leaderCh := make(chan *LeaderElection)
 	cl1 := tc.etcdClient()
 	cl2 := tc.etcdClient()
@@ -311,7 +311,7 @@ func TestConcurrentCampaigns(t *testing.T) {
 			},
 			log.Default(),
 		)
-		electionParticipants = append(electionParticipants, &le)
+		electionParticipants <- &le
 		require.NoError(t, err)
 		var wg sync.WaitGroup
 		defer wg.Wait()
@@ -345,8 +345,8 @@ func TestConcurrentCampaigns(t *testing.T) {
 	leader1.Close(log.Default())
 
 	leader2 := <-leaderCh
-	for _, cl := range electionParticipants {
-		cl.Close(log.Default())
+	for el := range electionParticipants {
+		el.Close(log.Default())
 	}
 	leader2.Close(log.Default())
 }

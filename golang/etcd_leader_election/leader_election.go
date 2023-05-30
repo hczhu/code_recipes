@@ -157,13 +157,11 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 			errorCh <- errors.New("the session is done. I am not the leader anymore")
 			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
-			close(errorCh)
 		} else {
 			logger.Printf("%s: Campaign() returned an error: %+v.\n", config.InstanceId, err)
 			errorCh <- err
 			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
-			close(errorCh)
 		}
 		logger.Printf("%s: Campaign go routine exit.\n", config.InstanceId)
 	}(errorCh, becomeLeaderCh)
