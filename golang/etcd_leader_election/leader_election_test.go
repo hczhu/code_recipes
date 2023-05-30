@@ -335,7 +335,7 @@ func TestConcurrentCampaigns(t *testing.T) {
 	leader2.Close(log.Default())
 }
 
-func TestBlocingWait(t *testing.T) {
+func TestBlockingWait(t *testing.T) {
 	tc := newTestCluster(t)
 	defer tc.close()
 
@@ -349,7 +349,7 @@ func TestBlocingWait(t *testing.T) {
 		le, err := StartLeaderElectionAsync(
 			Config{
 				EtcdSessionTTL: 2,
-				ElectionPrefix: "TestBlocingWait",
+				ElectionPrefix: "TestBlockingWait",
 				EtcdClient: cl,
 				InstanceId: instaceId,
 			},
