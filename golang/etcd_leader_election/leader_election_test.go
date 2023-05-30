@@ -85,7 +85,6 @@ func TestSingleCampaign(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Error("should have lost leadership")
 	}
-	tc.close()
 }
 func TestLongLivedLeader(t *testing.T) {
 	tc := newTestCluster(t)
@@ -199,7 +198,7 @@ func TestYieldingLeadership(t *testing.T) {
 		elections = append(elections, le)
 	}
 	isClosed := make([]bool, len(elections))
-	for _ = range elections {
+	for range elections {
 		leaders := 0
 		leaderIdx := -1
 		for i, le := range elections {
@@ -220,7 +219,7 @@ func TestYieldingLeadership(t *testing.T) {
 		log.Default().Println("closed leader", leaderIdx)
 		time.Sleep(time.Second * 3)
 	}
-	tc.close()
+	log.Default().Println("Closing the cluser")
 }
 func TestLeaderDeath(t *testing.T) {
 	tc := newTestCluster(t)
