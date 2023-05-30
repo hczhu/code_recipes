@@ -36,6 +36,18 @@ func (tc *testCluster) etcdClient() *clientv3.Client {
 	return tc.cluster.RandClient()
 }
 
+func TestDialTimeout(t *testing.T) {
+	_, err := StartLeaderElectionAsync(
+		Config{
+			EtcdSessionTTL: 3,
+			ElectionPrefix: "TestSingleCampaign",
+			EtcdEndpoint:   "http://localhost:80",
+		},
+		log.Default(),
+	)
+	assert.Error(t, err)
+}
+
 func TestSingleCampaign(t *testing.T) {
 	tc := newTestCluster(t)
 	defer tc.close()

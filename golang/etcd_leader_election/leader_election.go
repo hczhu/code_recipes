@@ -87,8 +87,7 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 
 func createEtcdClient(etcdEndpoint string) (*clientv3.Client, error) {
 	timeout := time.Duration(5 * time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	ctx, _ := context.WithTimeout(context.Background(), timeout)
 	client, err := clientv3.New(clientv3.Config{
     		Endpoints:   []string{etcdEndpoint},
     		DialTimeout: timeout,
