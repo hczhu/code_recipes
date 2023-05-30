@@ -35,6 +35,7 @@ type LeaderElection struct {
 	clientCreationCancel context.CancelFunc
 	shouldCloseEtcdClient *atomic.Bool
 	cancelCh chan struct{}
+	isLeader *atomic.Bool
 
 	// Once a caller is elected as a leader, this channel will be closed.
 	// The leader won't involuntarily lose the leadership as long as its etcd session is valid.
@@ -76,10 +77,10 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 		return 
 	}
 	logger.Println(l.instanceId, ": Canceling the campaign...")
-	// This will resign the leadership if the caller is already the leader but still in Campaign().
+	// This will resign the leadership if caller is already the leader but
+	// its campaign go routine is still in Campaign().
 	l.cancelCampaign()
-	if _, ok := <-l.BecomeLeaderCh; !ok {
-		// Already became the leader.
+	if l.isLeader.Load() {
 		logger.Println(l.instanceId, ": Resigning the leadership...")
 		l.etcdElection.Resign(context.Background())
 	}
@@ -146,12 +147,14 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	becomeLeaderCh := make(chan struct{})
 	errorCh := make(chan error, 1)
 	cancelCh := make(chan struct{})
+	isLeader := atomic.Bool{}
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
 		err := election.Campaign(campaignCtx, config.InstanceId)
 		if err == nil {
 			logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
+			isLeader.Store(true)	
 			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
 			// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
 			close(becomeLeaderCh)
@@ -181,6 +184,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		instanceId: config.InstanceId,
 		isClosed: &atomic.Bool{},
 		shouldCloseEtcdClient: &shouldCloseEtcdClientAtomic,
+		isLeader: &isLeader,
 		clientCreationCancel: clientCreationCancel,
 		cancelCh: cancelCh,
 
