@@ -100,7 +100,6 @@ func TestLongLivedLeader(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	defer wg.Wait()
 
 	wg.Add(1)
 	go func() {
@@ -124,10 +123,13 @@ func TestLongLivedLeader(t *testing.T) {
 		}
 	}()
 
+	log.Default().Println("Waiting for follower to close.")
+	wg.Wait()
+	log.Default().Println("Checking that the leader keeps leadership.")
 	select {
 	case <-leader.ErrorCh:
 		t.Error("should have kept leadership")
-	case <-time.After(10 * time.Second):
+	case <-time.After(3 * time.Second):
 		break
 	}
 }
