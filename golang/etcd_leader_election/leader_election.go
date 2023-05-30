@@ -32,7 +32,8 @@ type LeaderElection struct {
 	cancelCampaign context.CancelFunc
 	instanceId string
 	isClosed atomic.Bool
-	dontCloseEtcdClient bool
+	clientCreationCancel context.CancelFunc
+	shouldCloseEtcdClient bool
 	cancelCh chan struct{}
 
 	// Once a caller is elected as a leader, this channel will be closed.
@@ -79,21 +80,22 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 	l.etcdElection.Resign(context.Background())
 	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
-	if !l.dontCloseEtcdClient {
+	if l.shouldCloseEtcdClient {
 		logger.Println(l.instanceId, ": Closing the etcd client...")
+		l.clientCreationCancel()
 	    l.etcdClient.Close()
 	}
 }
 
-func createEtcdClient(etcdEndpoint string) (*clientv3.Client, error) {
+func createEtcdClient(etcdEndpoint string) (*clientv3.Client, context.CancelFunc, error) {
 	timeout := time.Duration(5 * time.Second)
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	client, err := clientv3.New(clientv3.Config{
     		Endpoints:   []string{etcdEndpoint},
     		DialTimeout: timeout,
     		Context:	 ctx,
 	})	
-	return client, err
+	return client, cancel, err
 }
 
 // Call LeaderElection.Close() to cancel the election participation or yield the leadership.
@@ -106,12 +108,14 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	}()
 
 	client := config.EtcdClient
-	dontCloseEtcdClient := true
+	var clientCreationCancel context.CancelFunc = func() {}
+	// Don't close the client if it's not created by this function.
+	shouldCloseEtcdClient := false
 	var err error = nil
 	if client == nil {
 		logger.Printf("Establishing connection to etcd endpoint: %s\n", config.EtcdEndpoint)
-		client, err = createEtcdClient(config.EtcdEndpoint)
-		dontCloseEtcdClient = false
+		client, clientCreationCancel, err = createEtcdClient(config.EtcdEndpoint)
+		shouldCloseEtcdClient = true
 	}
 	if err != nil {
 		logger.Printf("Failed to created an ETCD client with error: %v\n", err)
@@ -135,7 +139,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	election := concurrency.NewElection(session, config.ElectionPrefix)
 	campaignCtx, cancelCampaign := context.WithCancel(context.Background())
 	becomeLeaderCh := make(chan struct{})
-	errorCh := make(chan error)
+	errorCh := make(chan error, 1)
 	cancelCh := make(chan struct{})
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf("%s: Obtaining leadership with etcd prefix: %s\n", config.InstanceId, config.ElectionPrefix)
@@ -150,12 +154,15 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 			<-session.Done()
 			logger.Printf("%s: The session is done. I am not the leader anymore for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
 			errorCh <- errors.New("the session is done. I am not the leader anymore")
+			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
 		} else {
 			logger.Printf("%s: Campaign() returned an error: %+v.\n", config.InstanceId, err)
 			errorCh <- err
+			logger.Printf("%s: Closing the cancel chan.\n", config.InstanceId)
 			close(cancelCh)
 		}
+		logger.Printf("%s: Campaign go routine exit.\n", config.InstanceId)
 	}(errorCh, becomeLeaderCh)
 
 	toClose = toClose[:0]
@@ -166,7 +173,8 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		cancelCampaign: cancelCampaign,
 		instanceId: config.InstanceId,
 		isClosed: atomic.Bool{},
-		dontCloseEtcdClient: dontCloseEtcdClient,
+		shouldCloseEtcdClient: shouldCloseEtcdClient,
+		clientCreationCancel: clientCreationCancel,
 		cancelCh: cancelCh,
 
 		BecomeLeaderCh: becomeLeaderCh,
