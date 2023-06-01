@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -100,22 +101,31 @@ func createEtcdClient(etcdEndpoints []string) (*clientv3.Client, error) {
 }
 func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	cancelTimeoutCh := make(chan struct{}, 1)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func () {
+		defer wg.Done()
     	sessionCreationTimeout := time.Duration(8 * time.Second)
 		select {
-		case <-ctx.Done():
-			cancel()
+		case <-cancelTimeoutCh:
 			break
 		case <-time.After(sessionCreationTimeout):
 			cancel()
 		}
 	}()
-	// NB: This call will be blocked indefinitely if the etcd servers are not reachable.
-    return concurrency.NewSession(
+
+	 // NB: This call will be blocked indefinitely if the etcd servers are not reachable.
+	 session, err := concurrency.NewSession(
 		client,
 		concurrency.WithTTL(int(config.EtcdSessionTTL.Seconds())),
+		// Can't use a timeout context, because the session will be closed when the context times out.
 		concurrency.WithContext(ctx),
 	)
+	cancelTimeoutCh <- struct{}{}
+	wg.Wait()
+	return session, err
 }
 
 // Call LeaderElection.Close() to cancel the election participation or yield the leadership.

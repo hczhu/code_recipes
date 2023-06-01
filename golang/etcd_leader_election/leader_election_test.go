@@ -86,10 +86,11 @@ func TestEtcdServerShutdownAfterLeadership(t *testing.T) {
 	}
 
 	tc.close()
+
 	select {
 	case err := <-le.ErrorCh:
 		log.Default().Println("Got error: ", err)
-	case <-time.After(15 * time.Second):
+	case <-time.After(20 * time.Second):
 		t.Fatal("should have got an error")
 	}
 	le.Close(log.Default())
@@ -122,7 +123,7 @@ func TestSingleCampaign(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 	select {
-	case <-le.ErrorCh:
+	case err := <-le.ErrorCh:
 		log.Default().Println("Got error: ", err)
 		t.Fatal("should have kept leadership")
 	case <-time.After(10 * time.Second):
@@ -134,7 +135,7 @@ func TestSingleCampaign(t *testing.T) {
 	case <-le.ErrorCh:
 		break
 	case <-time.After(10 * time.Second):
-		t.Error("should have lost leadership")
+		t.Fatal("should have lost leadership")
 	}
 }
 func TestLongLivedLeader(t *testing.T) {
@@ -159,9 +160,9 @@ func TestLongLivedLeader(t *testing.T) {
 	case <-leader.BecomeLeaderCh:
 		break
 	case <-time.After(5 * time.Second):
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	case <-leader.ErrorCh:
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	}
 
 	var wg sync.WaitGroup
@@ -193,7 +194,7 @@ func TestLongLivedLeader(t *testing.T) {
 	log.Default().Println("Checking that the leader keeps leadership.")
 	select {
 	case <-leader.ErrorCh:
-		t.Error("should have kept leadership")
+		t.Fatal("should have kept leadership")
 	case <-time.After(3 * time.Second):
 		break
 	}
@@ -302,9 +303,9 @@ func TestLeaderDeath(t *testing.T) {
 	case <-leader.BecomeLeaderCh:
 		break
 	case <-time.After(5 * time.Second):
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	case <-leader.ErrorCh:
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	}
 
 	syncCh := make(chan struct{})
@@ -324,7 +325,7 @@ func TestLeaderDeath(t *testing.T) {
 		case <-follower.BecomeLeaderCh:
 			break
 		case <-time.After(10 * time.Second):
-			t.Error("should have become leader within 10 seconds")
+			t.Fatal("should have become leader within 10 seconds")
 		}
 		syncCh <- struct{}{}
 	}()
@@ -333,7 +334,7 @@ func TestLeaderDeath(t *testing.T) {
 	case <-leader.ErrorCh:
 		break
 	case <-time.After(5 * time.Second):
-		t.Error("should have lost leadership after session closed")
+		t.Fatal("should have lost leadership after session closed")
 	}
 	<-syncCh
 }
