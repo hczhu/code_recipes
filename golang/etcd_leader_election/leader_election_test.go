@@ -80,17 +80,17 @@ func TestEtcdServerShutdownAfterLeadership(t *testing.T) {
 	case <-le.BecomeLeaderCh:
 		break
 	case <-time.After(5 * time.Second):
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	case <-le.ErrorCh:
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	}
 
 	tc.close()
 	select {
 	case err := <-le.ErrorCh:
 		log.Default().Println("Got error: ", err)
-	case <-time.After(5 * time.Second):
-		t.Error("should have got an error")
+	case <-time.After(15 * time.Second):
+		t.Fatal("should have got an error")
 	}
 	le.Close(log.Default())
 }
@@ -115,15 +115,16 @@ func TestSingleCampaign(t *testing.T) {
 	case <-le.BecomeLeaderCh:
 		break
 	case <-time.After(5 * time.Second):
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	case <-le.ErrorCh:
-		t.Error("should have become leader")
+		t.Fatal("should have become leader")
 	}
 
 	time.Sleep(5 * time.Second)
 	select {
 	case <-le.ErrorCh:
-		t.Error("should have kept leadership")
+		log.Default().Println("Got error: ", err)
+		t.Fatal("should have kept leadership")
 	case <-time.After(10 * time.Second):
 		break
 	}
@@ -132,7 +133,7 @@ func TestSingleCampaign(t *testing.T) {
 	select {
 	case <-le.ErrorCh:
 		break
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Error("should have lost leadership")
 	}
 }

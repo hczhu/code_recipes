@@ -99,9 +99,18 @@ func createEtcdClient(etcdEndpoints []string) (*clientv3.Client, error) {
 	})	
 }
 func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, error) {
-    sessionCreationTimeout := time.Duration(10 * time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), sessionCreationTimeout)
-	defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func () {
+    	sessionCreationTimeout := time.Duration(8 * time.Second)
+		select {
+		case <-ctx.Done():
+			cancel()
+			break
+		case <-time.After(sessionCreationTimeout):
+			cancel()
+		}
+	}()
+	// NB: This call will be blocked indefinitely if the etcd servers are not reachable.
     return concurrency.NewSession(
 		client,
 		concurrency.WithTTL(int(config.EtcdSessionTTL.Seconds())),
