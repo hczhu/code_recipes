@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/tests/v3/framework/integration"
 )
 
@@ -32,20 +31,74 @@ func (tc *testCluster) close() {
 	tc.cluster.Terminate(tc.t)
 }
 
-func (tc *testCluster) etcdClient() *clientv3.Client {
-	return tc.cluster.RandClient()
+func (tc *testCluster) etcdEndpoints() []string {
+	return tc.cluster.Endpoints()
 }
 
-func TestDialTimeout(t *testing.T) {
+func TestUnreachableEtcdServer(t *testing.T) {
 	_, err := StartLeaderElectionAsync(
 		Config{
 			EtcdSessionTTL: 3,
-			ElectionPrefix: "TestSingleCampaign",
-			EtcdEndpoint:   "http://localhost:80",
+			ElectionPrefix: "TestUnreachableEtcdServer",
+			// NB: those are non-existent endpoints, but an ETCD client will still be created successfully while session creation will fail.
+			EtcdEndpoints:   []string{"http://localhost:80", "http://localhost:81"},
 		},
 		log.Default(),
 	)
 	assert.Error(t, err)
+}
+
+func TestEtcdServerShutdownBeforeLeadership(t *testing.T) {
+	tc := newTestCluster(t)
+	le, err := StartLeaderElectionAsync(
+		Config{
+			EtcdSessionTTL: 3,
+			ElectionPrefix: "TestEtcdServerShutdownBeforeLeadership",
+			EtcdEndpoints:  tc.etcdEndpoints(), 
+			InstanceId: "leader",
+		},
+		log.Default(),
+	)
+	assert.NoError(t, err)
+	tc.close()
+	select {
+	case err := <-le.ErrorCh:
+		log.Default().Println("Got error: ", err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("should have got an error")
+	}
+	le.Close(log.Default())
+}
+
+
+func TestEtcdServerShutdownAfterLeadership(t *testing.T) {
+	tc := newTestCluster(t)
+	le, err := StartLeaderElectionAsync(
+		Config{
+			EtcdSessionTTL: 3,
+			ElectionPrefix: "TestEtcdServerShutdownAfterLeadership",
+			EtcdEndpoints:  tc.etcdEndpoints(), 
+		},
+		log.Default(),
+	)
+	assert.NoError(t, err)
+	select {
+	case <-le.BecomeLeaderCh:
+		break
+	case <-time.After(5 * time.Second):
+		t.Error("should have become leader")
+	case <-le.ErrorCh:
+		t.Error("should have become leader")
+	}
+
+	tc.close()
+	select {
+	case err := <-le.ErrorCh:
+		log.Default().Println("Got error: ", err)
+	case <-time.After(5 * time.Second):
+		t.Error("should have got an error")
+	}
+	le.Close(log.Default())
 }
 
 func TestSingleCampaign(t *testing.T) {
@@ -59,7 +112,7 @@ func TestSingleCampaign(t *testing.T) {
 		Config{
 			EtcdSessionTTL: 3,
 			ElectionPrefix: "TestSingleCampaign",
-			EtcdClient: tc.etcdClient(),
+			EtcdEndpoints:  tc.etcdEndpoints(),
 		},
 		log.Default(),
 	)
@@ -100,7 +153,7 @@ func TestLongLivedLeader(t *testing.T) {
 		Config{
 			EtcdSessionTTL: 2,
 			ElectionPrefix: "TestLongLivedLeader",
-			EtcdClient: tc.etcdClient(),
+			EtcdEndpoints:  tc.etcdEndpoints(),
 			InstanceId: "leader",
 		},
 		log.Default(),
@@ -125,7 +178,7 @@ func TestLongLivedLeader(t *testing.T) {
 			Config{
 				EtcdSessionTTL: 2,
 				ElectionPrefix: "TestLongLivedLeader",
-				EtcdClient: tc.etcdClient(),
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "follower",
 			},
 			log.Default(),
@@ -163,7 +216,7 @@ func TestMultipleCampaigns(t *testing.T) {
 			Config{
 				EtcdSessionTTL: 3,
 				ElectionPrefix: "TsetMultipleCampaigns",
-				EtcdClient: tc.etcdClient(),
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "instance-" + strconv.Itoa(i),
 			},
 			log.Default(),
@@ -200,7 +253,7 @@ func TestYieldingLeadership(t *testing.T) {
 			Config{
 				EtcdSessionTTL: 2,
 				ElectionPrefix: "TestYieldingLeadership",
-				EtcdClient: tc.etcdClient(),
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "instance-" + strconv.Itoa(i),
 			},
 			log.Default(),
@@ -243,7 +296,7 @@ func TestLeaderDeath(t *testing.T) {
 		Config{
 			EtcdSessionTTL: 2,
 			ElectionPrefix: "TestLongLivedLeader",
-			EtcdClient: tc.etcdClient(),
+			EtcdEndpoints:  tc.etcdEndpoints(),
 			InstanceId: "leader",
 		},
 		log.Default(),
@@ -265,7 +318,7 @@ func TestLeaderDeath(t *testing.T) {
 			Config{
 				EtcdSessionTTL: 2,
 				ElectionPrefix: "TestLongLivedLeader",
-				EtcdClient: tc.etcdClient(),
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "follower",
 			},
 			log.Default(),
@@ -298,15 +351,12 @@ func TestConcurrentCampaigns(t *testing.T) {
 
 	electionParticipants := make(chan *LeaderElection, 3)
 	leaderCh := make(chan *LeaderElection, 3)
-	cl1 := tc.etcdClient()
-	cl2 := tc.etcdClient()
-	cl3 := tc.etcdClient()
-	process := func(instaceId string, cl *clientv3.Client) {
+	process := func(instaceId string) {
 		le, err := StartLeaderElectionAsync(
 			Config{
 				EtcdSessionTTL: 2,
 				ElectionPrefix: "TestConcurrentCampaigns",
-				EtcdClient: cl,
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: instaceId,
 			},
 			log.Default(),
@@ -338,9 +388,9 @@ func TestConcurrentCampaigns(t *testing.T) {
 		}()
 	}
 
-	go process("one", cl1)
-	go process("two", cl2)
-	go process("three", cl3)
+	go process("one")
+	go process("two")
+	go process("three")
 
 	leader1 := <-leaderCh
 	leader1.Close(log.Default())
@@ -362,16 +412,13 @@ func TestBlockingWait(t *testing.T) {
 
 	electionParticipants := make(chan *LeaderElection, 3)
 	leaderCh := make(chan *LeaderElection, 3)
-	cl1 := tc.etcdClient()
-	cl2 := tc.etcdClient()
-	cl3 := tc.etcdClient()
 
-	process := func(instaceId string, cl *clientv3.Client) {
+	process := func(instaceId string) {
 		le, err := StartLeaderElectionAsync(
 			Config{
 				EtcdSessionTTL: 2,
 				ElectionPrefix: "TestBlockingWait",
-				EtcdClient: cl,
+				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: instaceId,
 			},
 			log.Default(),
@@ -383,9 +430,9 @@ func TestBlockingWait(t *testing.T) {
 		}
 	}
 
-	go process("one", cl1)
-	go process("two", cl2)
-	go process("three", cl3)
+	go process("one")
+	go process("two")
+	go process("three")
 
 	leader1 := <-leaderCh
 	leader1.Close(log.Default())

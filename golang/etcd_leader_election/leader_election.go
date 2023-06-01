@@ -18,11 +18,9 @@ type closable interface {
 type Config struct {
 	EtcdSessionTTL time.Duration
 	ElectionPrefix	 string
-	EtcdEndpoint string
+	EtcdEndpoints []string
 	// This is used as the value of the ETCD leader election key for the caller and also logging.
 	InstanceId string
-	// This is used for unit tests only. Don't need to set it for production.
-	EtcdClient *clientv3.Client
 }
 
 type LeaderElection struct {
@@ -32,8 +30,6 @@ type LeaderElection struct {
 	cancelCampaign context.CancelFunc
 	instanceId string
 	isClosed *atomic.Bool
-	clientCreationCancel context.CancelFunc
-	shouldCloseEtcdClient *atomic.Bool
 	cancelCh chan struct{}
 	isLeader *atomic.Bool
 
@@ -82,26 +78,35 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 	l.cancelCampaign()
 	if l.isLeader.Load() {
 		logger.Println(l.instanceId, ": Resigning the leadership...")
-		l.etcdElection.Resign(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
+		defer cancel()
+		l.etcdElection.Resign(ctx)
 	}
 	logger.Println(l.instanceId, ": Closing the etcd session...")
 	l.etcdSession.Close()
-	if l.shouldCloseEtcdClient.Load() {
-		logger.Println(l.instanceId, ": Closing the etcd client...")
-		l.clientCreationCancel()
-	    l.etcdClient.Close()
-	}
+	logger.Println(l.instanceId, ": Closing the etcd client...")
+	l.etcdClient.Close()
 }
 
-func createEtcdClient(etcdEndpoint string) (*clientv3.Client, context.CancelFunc, error) {
-	timeout := time.Duration(5 * time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	client, err := clientv3.New(clientv3.Config{
-    		Endpoints:   []string{etcdEndpoint},
-    		DialTimeout: timeout,
+func createEtcdClient(etcdEndpoints []string) (*clientv3.Client, error) {
+    dialTimeout := time.Duration(10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
+	return clientv3.New(clientv3.Config{
+    		Endpoints:   etcdEndpoints,
+    		DialTimeout: dialTimeout,
     		Context:	 ctx,
 	})	
-	return client, cancel, err
+}
+func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, error) {
+    sessionCreationTimeout := time.Duration(10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), sessionCreationTimeout)
+	defer cancel()
+    return concurrency.NewSession(
+		client,
+		concurrency.WithTTL(int(config.EtcdSessionTTL.Seconds())),
+		concurrency.WithContext(ctx),
+	)
 }
 
 // Call LeaderElection.Close() to cancel the election participation or yield the leadership.
@@ -113,28 +118,17 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		}	
 	}()
 
-	client := config.EtcdClient
-	var clientCreationCancel context.CancelFunc = func() {}
-	// Don't close the client if it's not created by this function.
-	shouldCloseEtcdClient := false
-	var err error = nil
-	if client == nil {
-		logger.Printf("Establishing connection to etcd endpoint: %s\n", config.EtcdEndpoint)
-		client, clientCreationCancel, err = createEtcdClient(config.EtcdEndpoint)
-		shouldCloseEtcdClient = true
-	}
+	logger.Printf("Establishing connection to etcd endpoint: %+v\n", config.EtcdEndpoints)
+	client, err := createEtcdClient(config.EtcdEndpoints)
+
 	if err != nil {
 		logger.Printf("Failed to created an ETCD client with error: %v\n", err)
 		return LeaderElection{}, err
 	}
 	toClose = append(toClose, client)
-	logger.Println("Etcd connection is established successfully.")
 
-	// If this caller exits without calling Resign() or Close(), the session will expire after the TTL
-	// and the leadership will be lost, if this caller was the leader.
-    session, err := concurrency.NewSession(client, concurrency.WithTTL(
-		int(config.EtcdSessionTTL.Seconds()),
-	))
+	logger.Println("Creating an Etcd session...")
+    session, err := createEtcdSession(client, &config)
 	if err != nil {
 		logger.Printf("Failed to created an ETCD session with error: %v\n", err)
 		return LeaderElection{}, err
@@ -174,8 +168,6 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	}(errorCh, becomeLeaderCh)
 
 	toClose = toClose[:0]
-	shouldCloseEtcdClientAtomic := atomic.Bool{}
-	shouldCloseEtcdClientAtomic.Store(shouldCloseEtcdClient)
 	return LeaderElection{
 		etcdClient: client,
 		etcdSession: session,
@@ -183,9 +175,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		cancelCampaign: cancelCampaign,
 		instanceId: config.InstanceId,
 		isClosed: &atomic.Bool{},
-		shouldCloseEtcdClient: &shouldCloseEtcdClientAtomic,
 		isLeader: &isLeader,
-		clientCreationCancel: clientCreationCancel,
 		cancelCh: cancelCh,
 
 		BecomeLeaderCh: becomeLeaderCh,
