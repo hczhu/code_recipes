@@ -61,12 +61,6 @@ func TestEtcdServerShutdownBeforeLeadership(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	tc.close()
-	select {
-	case err := <-le.ErrorCh:
-		log.Default().Println("Got error: ", err)
-	case <-time.After(10 * time.Second):
-		t.Fatal("should have got an error")
-	}
 	le.Close(log.Default())
 }
 

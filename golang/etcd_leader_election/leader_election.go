@@ -148,7 +148,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		err := election.Campaign(campaignCtx, config.InstanceId)
 		if err == nil {
 			logger.Printf("%s: I am the leader for election prefix: %s\n", config.InstanceId, config.ElectionPrefix)
-			isLeader.Store(true)	
+			isLeader.Store(true)
 			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
 			// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
 			close(becomeLeaderCh)
