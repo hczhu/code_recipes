@@ -27,6 +27,7 @@ type Config struct {
 type LeaderElection struct {
 	etcdClient *clientv3.Client
 	etcdSession *concurrency.Session
+	sessionCancel context.CancelFunc
 	etcdElection *concurrency.Election
 	cancelCampaign context.CancelFunc
 	instanceId string
@@ -84,6 +85,7 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 		l.etcdElection.Resign(ctx)
 	}
 	logger.Println(l.instanceId, ": Closing the etcd session...")
+	l.sessionCancel()
 	l.etcdSession.Close()
 	logger.Println(l.instanceId, ": Closing the etcd client...")
 	l.etcdClient.Close()
@@ -99,7 +101,8 @@ func createEtcdClient(etcdEndpoints []string) (*clientv3.Client, error) {
     		Context:	 ctx,
 	})	
 }
-func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, error) {
+
+func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancelTimeoutCh := make(chan struct{}, 1)
 
@@ -125,7 +128,7 @@ func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Se
 	)
 	cancelTimeoutCh <- struct{}{}
 	wg.Wait()
-	return session, err
+	return session, cancel, err
 }
 
 // Call LeaderElection.Close() to cancel the election participation or yield the leadership.
@@ -147,7 +150,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	toClose = append(toClose, client)
 
 	logger.Println("Creating an Etcd session...")
-    session, err := createEtcdSession(client, &config)
+    session, sessionCancel, err := createEtcdSession(client, &config)
 	if err != nil {
 		logger.Printf("Failed to created an ETCD session with error: %v\n", err)
 		return LeaderElection{}, err
@@ -190,6 +193,7 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	return LeaderElection{
 		etcdClient: client,
 		etcdSession: session,
+		sessionCancel: sessionCancel,
 		etcdElection: election,
 		cancelCampaign: cancelCampaign,
 		instanceId: config.InstanceId,
