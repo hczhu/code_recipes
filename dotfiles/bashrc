@@ -779,6 +779,12 @@ dockerRun() {
 if [ -d "/usr/local/cuda-12" ]; then
   CUDA="$(ls /usr/local/cuda-12\.* -d | head -n1)"
   export PATH=${CUDA}/bin${PATH:+:${PATH}}
-  export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64\
-                           ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+  export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
+
+installNvidiaDriver() {
+  driver=$(nvidia-detector)
+  echo "Will install Nvidia driver: ${driver}"
+  sudo apt-get install -y ${driver} "$(echo ${driver} | sed 's/-driver-/-dkms-/')"
+  nvidia-smi
+}
