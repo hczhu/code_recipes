@@ -785,7 +785,7 @@ fi
 installNvidiaDrive() {
   driver=$(nvidia-detector)
   echo "Will install Nvidia driver: ${driver}"
-  sudo apt-get install -y ${driver} "$(echo ${driver} | sed 's/-driver-/-dkms-/')"
+  sudo apt install -y ${driver} "$(echo ${driver} | sed 's/-driver-/-dkms-/')"
   nvidia-smi
 }
 
