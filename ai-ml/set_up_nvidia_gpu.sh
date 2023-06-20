@@ -16,6 +16,10 @@ installNvidiaLibContainer() {
   docker pull nvcr.io/nvidia/pytorch:23.05-py3
 }
 
+installNvidiaDrive
+
+installNvidiaLibContainer
+
 if [ -d "/usr/local/cuda-12" ]; then
   CUDA="$(ls /usr/local/cuda-12\.* -d | head -n1)"
   export PATH=${CUDA}/bin${PATH:+:${PATH}}
