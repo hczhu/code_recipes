@@ -434,6 +434,7 @@ alias git-ci-push='git-ci "update" && git push'
 alias git-amend='git commit -a --amend'
 alias git-add-interactive='git add -p'
 alias git-amend='git commit -a --amend'
+alias git-amend-push='git commit --no-edit -a --amend && git-push-to-origin -f'
 
 portListener() {
   sudo lsof -i :$1
