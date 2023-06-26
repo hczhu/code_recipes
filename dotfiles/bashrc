@@ -573,7 +573,7 @@ alias gcc-lib-dirs='gccLibs'
 
 serviceLogs() {
   service=${1} && shift
-  journalctl --unit="*${service}*" ${*}
+  journalctl -S "1 hour ago" --unit="*${service}*" ${*}
 }
 
 alias service-logs=serviceLogs
