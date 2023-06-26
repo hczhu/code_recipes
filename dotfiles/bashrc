@@ -782,3 +782,5 @@ if [ -d "/usr/local/cuda-12" ]; then
   export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64\
                            ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
+
+alias jupyter_notebook='jupyter-notebook --notebook-dir=/mnt/data/notebooks --ip=0.0.0.0'
