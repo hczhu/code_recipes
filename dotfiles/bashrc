@@ -434,6 +434,7 @@ alias git-ci-push='git-ci "update" && git push'
 alias git-amend='git commit -a --amend'
 alias git-add-interactive='git add -p'
 alias git-amend='git commit -a --amend'
+alias git-amend-push='git commit --no-edit -a --amend && git-push-to-origin -f'
 
 portListener() {
   sudo lsof -i :$1
@@ -784,3 +785,13 @@ if [ -d "/usr/local/cuda-12" ]; then
 fi
 
 alias jupyter_notebook='jupyter-notebook --notebook-dir=/mnt/data/notebooks --ip=0.0.0.0'
+
+installDocker() {
+  sudo mkdir -p /etc/apt/keyring || true
+  sudo apt install -y ca-certificates curl gnupg lsb-release
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  sudo chmod a+r /etc/apt/keyrings/docker.gpg
+  echo  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+  sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  sudo gpasswd -a ${USER} docker
+}
