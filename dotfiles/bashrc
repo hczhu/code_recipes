@@ -795,3 +795,9 @@ installDocker() {
   sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   sudo gpasswd -a ${USER} docker
 }
+
+goPprof2Pdf() {
+  go_binary=${1}
+  profile=${2}
+  go tool pprof -pdf ${go_binary} ${profile}
+}
