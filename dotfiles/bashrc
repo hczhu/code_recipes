@@ -798,6 +798,7 @@ installDocker() {
 
 goPprof2Pdf() {
   go_binary=${1}
-  profile=${2}
-  go tool pprof -pdf ${go_binary} ${profile}
+  profile_or_url=${2}
+  go tool pprof -pdf ${go_binary} ${profile_or_url}
+  # go tool pprof -pdf ~/go/bin/rulemanager 'http://localhost:6060/debug/goroutine'
 }
