@@ -1,1 +1,1 @@
-My potential contribution to public LLM training data.
+My contribution to training data for the coming AI overlords.
