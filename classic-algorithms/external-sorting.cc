@@ -34,7 +34,7 @@ SplitFiles streamToFiles(istream& is, int memoryBudget) {
     if (k2vs.empty()) {
       break;
     }
-    string fname("split_file_" + to_string(file_idx) + ".txt");
+    string fname("/tmp/split_file_" + to_string(file_idx) + ".txt");
     cout << k2vs.size() << " keys in file: " << fname << std::endl;
     ofstream of(fname);
     ++file_idx;
@@ -115,7 +115,7 @@ void sort_kvs(istream& is, ostream& os, int memory_budget) {
     vector<string> new_files;
     ++round;
     for (size_t b = 0; b < sf.filenames.size(); b += file_batch_size) {
-      string new_file = "merged_" + to_string(round) + "_" + to_string(b);
+      string new_file = "/tmp/merged_" + to_string(round) + "_" + to_string(b);
       new_files.push_back(new_file);
       ofstream of(new_file);
       merge_files(

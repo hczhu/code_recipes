@@ -76,7 +76,7 @@ def split_into_files(input: typing.TextIO, memory_budget: int) -> (typing.List[s
             k2vs[k].append(v)
             current_memory_budget -= len(k) + len(v)
         if len(k2vs) == 0: break
-        file_name = f"file_{file_idx}.txt"
+        file_name = f"/tmp/file_{file_idx}.txt"
         logging.info(f"Writing {len(k2vs)} keys to file {file_name}")
         file_idx += 1
         file_names.append(file_name)
@@ -135,7 +135,7 @@ def sort_kvs(input: typing.TextIO, output: typing.TextIO, memory_budget: int):
         new_files = []
         new_file_idx = 0
         while len(files) > 1:
-            new_file = f"merge_{merge_round}_{new_file_idx}.txt"
+            new_file = f"/tmp/merge_{merge_round}_{new_file_idx}.txt"
             new_file_idx += 1
             with open(new_file, 'w') as f:
                 merge_files(files[:file_batch_size], f)
