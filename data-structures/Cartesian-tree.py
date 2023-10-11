@@ -26,11 +26,13 @@ def getCartesianTree(elements):
         if len(stack) > 0:
             stack[-1].r_child = new_node
         stack.append(new_node)
+        # print([s.idx for s in stack])
 
     return stack[0]
 
 
-# print(getCartesianTree([9, 3, 7, 1, 8,]))
+getCartesianTree([9, 3, 7, 1, 8, 12, 10, 20, 15,18, 5])
+# print("=====")
 
 
 M = 10 ** 9 + 7
