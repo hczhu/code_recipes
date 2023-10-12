@@ -123,8 +123,9 @@ class AsyncCrawler:
     async def crawl_all_with_client(self, tasks: Iterator[CrawlTask], client: AsyncClient) -> AsyncIterator[CrawResult]:
         while True:
             self.populate_pending_tasks(tasks, client)
-            self.logger.info(f"Got {len(self.pending_tasks)} pending tasks")
+            self.logger.debug(f"Got {len(self.pending_tasks)} pending tasks")
             done, pending_tasks = await asyncio.wait(self.pending_tasks, return_when=asyncio.FIRST_COMPLETED)
+            self.logger.debug(f"Got {len(done)} done tasks")
             self.pending_tasks = list(pending_tasks)
             for ft in done:
                 result = await ft
