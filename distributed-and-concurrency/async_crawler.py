@@ -145,6 +145,7 @@ if __name__ == '__main__':
         max_pending=max_pending,
         post_processor=lambda result: print_result(result),
     ))
+    crawler.logger.info(f"Crawler options: {crawler.opts}")
     def show(result: CrawResult) -> None:
         crawler.logger.info(f"Got result {result}")
         print(result)
