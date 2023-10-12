@@ -10,6 +10,7 @@ from collections.abc import Iterator, AsyncIterator
 from typing import Callable
 import logging
 import tldextract
+import gzip, io, zlib
 
 @dataclass
 class CrawResult:
@@ -24,7 +25,9 @@ class CrawResult:
         return (f"CrawResult(url={self.url}, domain={self.domain}, walltime ms={int(1000 * self.walltime_seconds)}, " +
             f"content encoding={self.headers.get('content-encoding', '')}, "
             f"content length in header={self.headers.get('content-length', '-1')}, "
-            f"content length={len(self.content) if self.content is not None else 0}, error={self.error})")
+            f"content length={len(self.content) if self.content is not None else 0}, error={self.error}, )"
+            f"content={self.content[:100] if self.content is not None else ''}"
+        )
 
 class CrawlOptions(NamedTuple):
     headers: dict[str, str] = {}
@@ -71,6 +74,7 @@ class AsyncCrawler:
         )
         try:
             result.walltime_seconds = time.time()
+            # HTTPX automatically decompresses the returned content. It can handle responses sent with gzip or deflate compression.
             resp = await client.get(
                 task.url,
                 timeout=self.opts.timeout_seconds,
