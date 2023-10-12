@@ -138,7 +138,11 @@ class AsyncCrawler:
                 break
 
 if __name__ == '__main__':
+    max_pending = 3
+    if len(sys.argv) > 1:
+        max_pending = int(sys.argv[1])
     crawler = AsyncCrawler(CrawlOptions(
+        max_pending=max_pending,
         post_processor=lambda result: print_result(result),
     ))
     def show(result: CrawResult) -> None:
