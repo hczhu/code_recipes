@@ -10,7 +10,7 @@ from collections.abc import Iterator, AsyncIterator
 from typing import Callable
 import logging
 import tldextract
-import gzip, io, zlib
+import sys
 
 @dataclass
 class CrawResult:
@@ -149,11 +149,8 @@ if __name__ == '__main__':
         loop = asyncio.get_running_loop()
         loop.run_in_executor(None, lambda r: show(r), result)
 
-    tasks = [
-        CrawlTask(url="https://www.techmeme.com/feed.xml"),
-        CrawlTask(url="http://www.techmeme.com/index.xml"),
-        CrawlTask(url="http://www.techmeme_no_here.com/index.xml"),
-        CrawlTask(url="https://www.marketscreener.com/rss/FeedNews.php"),
-        CrawlTask(url="https://www.techmeme.com/no_a_feed.xml"),
-    ]
-    asyncio.run(crawler.crawl_all(iter(tasks)))
+    def gen_urls() -> Iterator[CrawlTask]:
+        for line in sys.stdin:
+            yield CrawlTask(url=line.strip())
+
+    asyncio.run(crawler.crawl_all(gen_urls()))
