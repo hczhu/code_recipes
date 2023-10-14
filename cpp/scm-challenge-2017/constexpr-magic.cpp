@@ -1,45 +1,5 @@
+#include <header.h>
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cassert>
-#include <cmath>
-#include <complex>
-#include <condition_variable>
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <functional>
-#include <iostream>
-#include <iterator>
-#include <limits>
-#include <limits.h>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <numeric>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <valarray>
-#include <vector>
-
-#include <glog/logging.h>
-#include <gflags/gflags.h>
-#include <gtest/gtest.h>
-
-template<typename T>
-class _DisplayType;
-
-template<typename T>
-void _displayType(T&& t);
-
-#define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
-
-/* template end */
 constexpr const auto &lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eu lorem sed odio varius vestibulum et eu ante. Quisque rutrum, sem vitae accumsan finibus, enim elit mattis urna, gravida rhoncus erat sem quis lectus. Donec ultrices pretium arcu, rhoncus facilisis eros lobortis sit amet. Quisque vitae lorem at ante ultricies pulvinar. Sed suscipit faucibus tempus. Donec ut sem felis. Ut porttitor libero justo, ultrices egestas purus cursus cursus. Fusce et sapien felis. Phasellus ut ornare arcu. Vestibulum eget finibus dui. Sed quam sem, efficitur vitae risus egestas, vehicula vestibulum est. Nulla rutrum tempus mollis. Nunc a elementum felis";
 
 struct StringPiece {
