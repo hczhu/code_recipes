@@ -26,10 +26,10 @@
 #include <valarray>
 #include <vector>
 
-#define PEEK(x) std::cout << #x << ": [" << (x) << "]" << std::endl;
-
 template<typename T>
 class _DisplayType;
 
 template<typename T>
 void _displayType(T&& t);
+
+#define PEEK(x) LOG(INFO) << #x << ": [" << (x) << "]"
