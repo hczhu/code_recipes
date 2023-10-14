@@ -1,4 +1,4 @@
-#inlcude "../header.h"
+#include "../header.h"
 
 
 // https://en.cppreference.com/w/cpp/thread

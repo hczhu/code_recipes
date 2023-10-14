@@ -1,4 +1,4 @@
-#inlcude "../header.h"
+#include "../header.h"
 
 
 class LazyArray {

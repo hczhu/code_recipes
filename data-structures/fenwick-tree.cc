@@ -1,4 +1,4 @@
-#inlcude "../header.h"
+#include "../header.h"
 
 
 size_t ceilingTwo(size_t n) {
