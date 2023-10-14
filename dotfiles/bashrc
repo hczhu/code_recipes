@@ -431,10 +431,9 @@ function searchForCppSymbol() {
 
 alias git-ci='git commit -am'
 alias git-ci-push='git-ci "update" && git push'
-alias git-amend='git commit -a --amend'
 alias git-add-interactive='git add -p'
-alias git-amend='git commit -a --amend'
-alias git-amend-push='git commit --no-edit -a --amend && git-push-to-origin -f'
+alias git-amend='git commit -a --amend --no-edit'
+alias git-amend-push='git-amend && git-push-to-origin -f'
 
 portListener() {
   sudo lsof -i :$1
@@ -802,3 +801,5 @@ goPprof2Pdf() {
   go tool pprof -pdf ${go_binary} ${profile_or_url}
   # go tool pprof -pdf ~/go/bin/rulemanager 'http://localhost:6060/debug/goroutine'
 }
+
+alias k-json="kubectl -o jsonpath='{}'"
