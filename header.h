@@ -26,6 +26,10 @@
 #include <valarray>
 #include <vector>
 
+#include <glog/logging.h>
+#include <gflags/gflags.h>
+#include <gtest/gtest.h>
+
 template<typename T>
 class _DisplayType;
 

@@ -1,4 +1,4 @@
-#include <header.h>
+#inlcude "../header.h"
 
 
 class SCC : public testing::Test {

@@ -1,4 +1,4 @@
-#include <header.h>
+#inlcude "../header.h"
 
 void relaxedMagic1() {
   std::atomic<int> x(0), y(0);
