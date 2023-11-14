@@ -593,6 +593,8 @@ alias utc-time='cat < /dev/tcp/time.nist.gov/13'
 alias dns-dig='dig @a.root-servers.net'
 
 alias openssl-show-pem='openssl x509 -noout -text -in'
+# Example googel.com:443
+alias openss-show-remote-cert='openssl s_client -showcerts -connect'
 
 alias hex-to-base64='xxd -r -p | base64'
 
