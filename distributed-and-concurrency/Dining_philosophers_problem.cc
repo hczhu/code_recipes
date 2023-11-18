@@ -196,20 +196,33 @@ class PhilosophersSync {
 
  private:
   const size_t numPhils_;
-  mutable std::mutex m_;
-  std::vector<State> states_;
+  // An eating philosoper i has to have already acquired sems_[i].
+  // Interestingly, he can release sems_[i] for himself to make progress of the
+  // whole algorithm when both of his neighbors are not eating.
+  // He can also release sems_[i - 1] and sems_[i + 1] for his neighbors to eat
+  // when he is putting forks.
   std::vector<std::unique_ptr<BinarySemaphore>> sems_;
 
-  // The caller must be holding 'm_'.
-  // It's a non-blocking API.
-  void tryToEat(size_t pid, std::function<void()> &&cb) & {
-    if (states_[pid] == State::HUNGRY &&
-        states_[(pid + numPhils_ - 1) % numPhils_] != State::EATING &&
-        states_[(pid + 1) % numPhils_] != State::EATING) {
-      states_[pid] = State::EATING;
-      // The beauty of this algorithm such that another philosopher can release
-      // the semaphore for 'pid' and starvation can be avoided by design.
-      sems_[pid]->release();
+  mutable std::mutex m_;
+  // Protected by 'm_'
+  std::vector<State> states_;
+
+  // The caller must be holding 'm_'. It's a non-blocking API.
+  // There are two cases where 'tryToEat' can be called:
+  //   1. A philosopher is trying to take forks. If two neighboring philosophers
+  //        are not eating, the philosopher can start eating by releasing the
+  //        semaphore.
+  //   2. A philosopher is putting forks. It calls tryToEat() on behalf of its
+  //   two neighboring philosophers.
+  void tryToEat(size_t selfPid, std::function<void()>&& cb) & {
+    if (states_[selfPid] == State::HUNGRY &&
+        states_[(selfPid + numPhils_ - 1) % numPhils_] != State::EATING &&
+        states_[(selfPid + 1) % numPhils_] != State::EATING) {
+      states_[selfPid] = State::EATING;
+      // The beauty of this algorithm such that a neighboring philosopher can
+      // release the semaphore for 'selfPid' and starvation can be avoided by
+      // design.
+      sems_[selfPid]->release();
       if (cb) {
         cb();
       }
