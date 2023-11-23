@@ -10,7 +10,10 @@ def identityMapper(line: str) -> str:
     return line
 
 def incrementMapper(line: str) -> str:
-    return str(int(line) + 1)
+    num = int(line)
+    if num < 0:
+        return ""
+    return str(num + 1)
 
 class TestSimple(unittest.TestCase):
     def simple_test(self, input_stream: str, expected_output: str,
@@ -53,6 +56,7 @@ class TestSimple(unittest.TestCase):
             a
             4
             5
+            -1
             """,
             """\
             3

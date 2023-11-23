@@ -16,7 +16,8 @@ from threading import Thread
 
 LineProcesser = Callable[[str], str]
 Queue = queues.SimpleQueue[str]
-exceptionLinePlaceholder: str = "__#exception#__"
+exceptionLinePlaceholder: str = "__##exception##__"
+filteredLinePlaceholder: str = "__##filtered##___"
 
 class WorkerInfo(NamedTuple):
     logger: logging.Logger
@@ -34,6 +35,8 @@ def mfpWorker(worker_info: WorkerInfo) -> None:
         while (line := worker_info.queue.get().strip()) != "":
             try:
                 output_line = worker_info.line_processer(line)
+                if output_line == "":
+                    output_line = filteredLinePlaceholder
                 output_file.write(output_line + "\n")
             except Exception as e:
                 worker_info.logger.error(f"Error processing line [{line}]: {e}")
@@ -122,7 +125,7 @@ class MpFileProcess:
                         temp_output_file.close()
                         closed_files += 1
                     else:
-                        if l != exceptionLinePlaceholder:
+                        if l not in {exceptionLinePlaceholder, filteredLinePlaceholder}:
                             output_file.write(l + "\n")
                         self.output_lines += 1
 
