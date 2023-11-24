@@ -75,11 +75,11 @@ class MpFileProcess:
                 exception_lines += worker.exception_lines.value
                 filtered_lines += worker.filtered_lines.value
             self.logger.info(
-                f"Progress: read {self.read_lines}"
-                f", processed {processed_lines}"
+                f"Progress by line: {self.read_lines} read"
+                f", {processed_lines} processed"
                 f", {exception_lines} exceptions"
                 f", {filtered_lines} filtered"
-                f", {self.output_lines} output lines.")
+                f", {self.output_lines} output.")
             time.sleep(self.progress_report_interval_seconds)
     
     def run(self,
@@ -114,7 +114,7 @@ class MpFileProcess:
             q_idx = (q_idx + 1) % num_processes
             self.read_lines += 1
         
-        self.logger.info("Finished reading input file and putting positions into worker queues.")
+        self.logger.info("Finished reading input file and putting poisons into worker queues.")
         for worker_info in worker_infos:
             # Poison pill.
             worker_info.queue.put("")
