@@ -4,6 +4,7 @@ The output is writter to the output file line-by-line in the same order as the i
 Empty strings are skipped.
 """
 
+from sys import exception
 import time
 import io
 import os
@@ -26,6 +27,8 @@ class WorkerInfo(NamedTuple):
     line_processer: LineProcesser
     # A counter shared between multiple processes.
     processed_lines: Any
+    exception_lines: Any
+    filtered_lines: Any
 
 # mp.Process() can only take a top-level function as the target.
 def mfpWorker(worker_info: WorkerInfo) -> None:
@@ -37,10 +40,12 @@ def mfpWorker(worker_info: WorkerInfo) -> None:
                 output_line = worker_info.line_processer(line)
                 if output_line == "":
                     output_line = filteredLinePlaceholder
+                    worker_info.filtered_lines.value += 1
                 output_file.write(output_line + "\n")
             except Exception as e:
                 worker_info.logger.error(f"Error processing line [{line}]: {e}")
                 output_file.write(exceptionLinePlaceholder + "\n")
+                worker_info.exception_lines.value += 1
             worker_info.processed_lines.value += 1
 
 class MpFileProcess:
@@ -63,10 +68,18 @@ class MpFileProcess:
     def reportProgress(self, worker_info: WorkerInfo) -> None:
         while not self.stop:
             processed_lines = 0
+            exception_lines = 0
+            filtered_lines = 0
             for worker in worker_info:
                 processed_lines += worker.processed_lines.value
-            self.logger.info(f"Progress: read {self.read_lines}, processed {processed_lines}, "
-                             f"and output {self.output_lines} lines.")
+                exception_lines += worker.exception_lines.value
+                filtered_lines += worker.filtered_lines.value
+            self.logger.info(
+                f"Progress: read {self.read_lines}"
+                f", processed {processed_lines}"
+                f", {exception_lines} exceptions"
+                f", {filtered_lines} filtered lines"
+                f", {self.output_lines} lines.")
             time.sleep(self.progress_report_interval_seconds)
     
     def run(self,
@@ -84,7 +97,8 @@ class MpFileProcess:
         for i in range(num_processes):
             q = mp.SimpleQueue()
             output_file_name = os.path.join(self.temp_file_dir, f"worker_output_{i}.txt")
-            worker_info = WorkerInfo(self.logger, q, output_file_name, line_processer, mp.Value('i', 0))
+            worker_info = WorkerInfo(self.logger, q, output_file_name, line_processer,
+                                     mp.Value('i', 0), mp.Value('i', 0), mp.Value('i', 0))
             worker = mp.Process(target=mfpWorker, args=(worker_info,), name=f"worker_{i}")
             worker.start()
             self.logger.info(f"Started worker {worker.name}")
