@@ -141,7 +141,7 @@ class MpFileProcess:
                     else:
                         if l not in {exceptionLinePlaceholder, filteredLinePlaceholder}:
                             output_file.write(l + "\n")
-                        self.output_lines += 1
+                            self.output_lines += 1
 
         self.logger.info(f"Finished outputing {self.output_lines} lines. "
                          "Joining the reporter.")
