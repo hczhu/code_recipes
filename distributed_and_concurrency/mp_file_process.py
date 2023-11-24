@@ -78,8 +78,8 @@ class MpFileProcess:
                 f"Progress: read {self.read_lines}"
                 f", processed {processed_lines}"
                 f", {exception_lines} exceptions"
-                f", {filtered_lines} filtered lines"
-                f", {self.output_lines} lines.")
+                f", {filtered_lines} filtered"
+                f", {self.output_lines} output lines.")
             time.sleep(self.progress_report_interval_seconds)
     
     def run(self,
