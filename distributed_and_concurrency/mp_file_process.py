@@ -75,7 +75,7 @@ class MpFileProcess:
                 exception_lines += worker.exception_lines.value
                 filtered_lines += worker.filtered_lines.value
             self.logger.info(
-                f"Progress by line: {self.read_lines} read"
+                f"Progress by line: {self.read_lines:,} read"
                 f", {processed_lines:,} processed"
                 f", {exception_lines:,} exceptions"
                 f", {filtered_lines:,} filtered"
