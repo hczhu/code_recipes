@@ -76,10 +76,10 @@ class MpFileProcess:
                 filtered_lines += worker.filtered_lines.value
             self.logger.info(
                 f"Progress by line: {self.read_lines} read"
-                f", {processed_lines} processed"
-                f", {exception_lines} exceptions"
-                f", {filtered_lines} filtered"
-                f", {self.output_lines} output.")
+                f", {processed_lines:,} processed"
+                f", {exception_lines:,} exceptions"
+                f", {filtered_lines:,} filtered"
+                f", {self.output_lines:,} output.")
             time.sleep(self.progress_report_interval_seconds)
     
     def run(self,
@@ -123,7 +123,7 @@ class MpFileProcess:
             # This is blocking until the worker finishes.
             worker.join()
 
-        self.logger.info(f"Finished processing {self.read_lines} lines. "
+        self.logger.info(f"Finished processing {self.read_lines:,} lines. "
                          "Joining temp output files from workers.")
 
         temp_output_files = [
@@ -143,7 +143,7 @@ class MpFileProcess:
                             output_file.write(l + "\n")
                             self.output_lines += 1
 
-        self.logger.info(f"Finished outputing {self.output_lines} lines. "
+        self.logger.info(f"Finished outputing {self.output_lines:,} lines. "
                          "Joining the reporter.")
         self.stop = True
         reporter.join()
