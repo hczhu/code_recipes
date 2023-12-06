@@ -42,6 +42,7 @@ func TestUnreachableEtcdServer(t *testing.T) {
 			ElectionPrefix: "TestUnreachableEtcdServer",
 			// NB: those are non-existent endpoints, but an ETCD client will still be created successfully while session creation will fail.
 			EtcdEndpoints:   []string{"http://localhost:80", "http://localhost:81"},
+			InstanceId: "leader",
 		},
 		log.Default(),
 	)
@@ -72,6 +73,7 @@ func TestEtcdServerShutdownAfterLeadership(t *testing.T) {
 			EtcdSessionTTL: 3,
 			ElectionPrefix: "TestEtcdServerShutdownAfterLeadership",
 			EtcdEndpoints:  tc.etcdEndpoints(), 
+			InstanceId: "leader1",
 		},
 		log.Default(),
 	)
@@ -109,6 +111,7 @@ func TestSingleCampaign(t *testing.T) {
 			EtcdSessionTTL: 3,
 			ElectionPrefix: "TestSingleCampaign",
 			EtcdEndpoints:  tc.etcdEndpoints(),
+			InstanceId: "leader1",
 		},
 		log.Default(),
 	)

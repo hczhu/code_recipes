@@ -53,6 +53,7 @@
   df = show --pretty="format:" --name-only
 	smartlog = log --graph --pretty=format:'commit: %C(bold red)%h%Creset %C(red)<%H>%Creset %C(bold magenta)%d %Creset%ndate: %C(bold yellow)%cd %Creset%C(yellow)%cr%Creset%nauthor: %C(bold blue)%an%Creset %C(blue)<%ae>%Creset%n%C(cyan)%s%n%Creset'
 	sl = !git smartlog
+	pp = "!f() { new_args=(); remote=\"\"; ref=\"\"; for arg in \"$@\"; do if [[ \"$arg\" != -* ]]; then if [[ \"$remote\" == \"\" ]]; then remote=\"$arg\"; new_args+=(\"$arg\"); else if [[ $ref == \"\" ]]; then ref=\"$arg\"; fi; if [[ \"$ref\" != hczhu/* ]]; then new_args+=(\"$arg:hczhu/$arg\"); else new_args+=(\"$arg\"); fi; fi; else new_args+=(\"$arg\"); fi; done; if [[ $remote == \"\" ]]; then new_args+=(\"origin\"); fi; if [[ $ref == \"\" ]]; then branch=$(git branch --show-current); if [[ \"$branch\" != hczhu/* ]]; then new_args+=(\"$branch:hczhu/$branch\"); else new_args+=(\"$branch\"); fi; fi; git push -u \"${new_args[@]}\"; }; f"
 [merge]
 	tool = vimdiff
 [receive]
@@ -69,3 +70,5 @@
 
 [url "ssh://git@github.com/"]
     insteadOf = https://github.com/
+[github]
+	username = hczhu
