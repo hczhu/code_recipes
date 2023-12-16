@@ -807,3 +807,7 @@ goPprof2Pdf() {
 alias k-json="kubectl -o jsonpath='{}'"
 
 alias git-amend="git commit -a --amend --reuse-message=HEAD"
+
+# Turn off ls output highlights
+unset LS_COLORS
+alias ls='ls --color=never'
