@@ -14,12 +14,12 @@ prog_name=$(basename "$0")
 dir_name=$(cd "$(dirname "$0")" || exit 1; pwd -P)
 
 if [ -r ${HOME}/.dotfiles ]; then
-  rm -i ${HOME}/.dotfiles
+  rm -f ${HOME}/.dotfiles
 fi
 ln -s ${dir_name} ${HOME}/.dotfiles
 
 if [[ -w ${HOME}/.bashrc ]]; then
-  echo ". ${dir_name}/${dotfile}" >> ${HOME}/.bashrc
+  echo ". ${dir_name}/bashrc" >> ${HOME}/.bashrc
 fi
 
 for dotfile in clang-format gitignore ctags bashrc gitconfig inputrc template.cpp tmux.conf vimrc hgrc; do
@@ -47,7 +47,7 @@ fi
 if [ ! -r ${tmuxPluginDir} ]; then
   git clone https://github.com/tmux-plugins/tpm ${tmuxPluginDir}/tpm
 fi
-tmux source ${HOME}/.tmux.conf
+tmux source ${HOME}/.tmux.conf || true
 
 if [ ! -r ${HOME}/.ssh/config ]; then
   ln -s ${dir_name}/ssh_config ${HOME}/.ssh/config
