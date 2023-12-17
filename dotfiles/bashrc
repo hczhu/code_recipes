@@ -640,8 +640,27 @@ getDockerMounts() {
   done
   echo "${ret}"
 }
+alias docker-bash="docker run --network host --dns 1.1.1.1 -it --entrypoint /bin/bash"
 
-alias docker-bash="docker run --network host --dns 1.1.1.1 -it --entrypoint /bin/bash $(getDockerMounts)"
+startDevContainer() {
+  echo "Starting hczhu.dev container"
+  V='hczhu.dev.container.volume'
+  docker volume create ${V}
+  docker-bash --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu
+}
+myDevContainer() {
+  running_container="$(docker container ls -f ancestor=hczhu.dev -q | head -n1)"
+  if [[ ! -z "${running_container}" ]]; then
+    docker container attach ${running_container}
+    return
+  fi
+  if ! docker-bash --restart=always --name "hczhu.dev.$(date +%Y-%m-%d)" hczhu.dev; then
+    >&2 echo "Please first build image hczhu.dev."
+    return
+  fi
+}
+
+alias dev-container='myDevContainer'
 
 kDecodeSecret() {
   kubectl get secrets -o jsonpath="{.data.server\.pem}" ${*} | base64 --decode | openssl x509 -text -noout
