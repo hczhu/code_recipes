@@ -26,3 +26,5 @@ WORKDIR /home/ubuntu
 RUN cd /home/ubuntu
 RUN git clone https://github.com/hczhu/code_recipes.git
 RUN cd code_recipes/dotfiles && (bash setup.sh || true)
+
+SHELL ["/bin/bash", "-c"]
