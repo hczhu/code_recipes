@@ -18,6 +18,7 @@ RUN apt install -y \
 RUN apt clean && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m ubuntu
+RUN echo 'ubuntu:password' | chpasswd
 RUN adduser ubuntu sudo
 USER ubuntu
 
