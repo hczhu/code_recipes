@@ -631,7 +631,7 @@ dateConvertFromUTC() {
   date -j -r $(TZ=UTC date -jf "%Y-%m-%dT%H:%M:%S" ${d} +"%s")
 }
 alias date-convert-from-utc='dateConvertFromUTC'
-alias docker-bash='docker run -it --entrypoint /bin/sh'
+alias docker-bash='docker run -it --entrypoint /bin/bash'
 
 kDecodeSecret() {
   kubectl get secrets -o jsonpath="{.data.server\.pem}" ${*} | base64 --decode | openssl x509 -text -noout
