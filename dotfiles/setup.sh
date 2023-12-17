@@ -50,5 +50,6 @@ fi
 tmux source ${HOME}/.tmux.conf || true
 
 if [ ! -r ${HOME}/.ssh/config ]; then
+  mkdir -p ${HOME}/.ssh || true
   ln -s ${dir_name}/ssh_config ${HOME}/.ssh/config
 fi
