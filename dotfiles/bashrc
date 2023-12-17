@@ -645,16 +645,20 @@ alias docker-bash="docker run --network host --dns 1.1.1.1 -it --entrypoint /bin
 startDevContainer() {
   echo "Starting hczhu.dev container"
   V='hczhu.dev.container.volume'
+  name="hczhu.dev.$(date +%Y-%m-%d)"
   docker volume create ${V}
-  docker-bash --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu
+  docker-bash --name ${name} --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu hczhu.dev
 }
+
 myDevContainer() {
-  running_container="$(docker container ls -f ancestor=hczhu.dev -q | head -n1)"
-  if [[ ! -z "${running_container}" ]]; then
-    docker container attach ${running_container}
-    return
-  fi
-  if ! docker-bash --restart=always --name "hczhu.dev.$(date +%Y-%m-%d)" hczhu.dev; then
+  name="hczhu.dev.$(date +%Y-%m-%d)"
+  names="${name} $(docker container ls -f ancestor=hczhu.dev -a -q)"
+  for name in ${names}; do
+    if (docker container restart ${name} || true) && docker container attach ${name}; then
+      return
+    fi
+  done
+  if ! startDevContainer; then
     >&2 echo "Please first build image hczhu.dev."
     return
   fi
