@@ -40,9 +40,17 @@ ENV GOPATH=${GO_INSTALL_DIR}/go
 ENV GODEBUG madvdontneed=1
 RUN ${GO_INSTALL_DIR}/go/bin/go install -v golang.org/x/tools/gopls@v0.14.2 || true
 
+# Pytorch
+RUN pip3 install torch torchvision torchaudio
+
 RUN cd /home/ubuntu
 RUN git clone https://github.com/hczhu/code_recipes.git
 # Too much side effect
 # RUN cd code_recipes/dotfiles && (bash setup.sh || true)
+
+# Interesting repos
+RUN git clone https://github.com/karpathy/minGPT.git
+RUN git clone https://github.com/karpathy/nanoGPT.git
+RUN git clone https://github.com/pytorch-labs/gpt-fast.git
 
 SHELL ["/bin/bash", "-c"]
