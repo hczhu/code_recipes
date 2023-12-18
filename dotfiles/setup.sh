@@ -22,7 +22,7 @@ if [[ -w ${HOME}/.bashrc ]]; then
   echo ". ${dir_name}/bashrc" >> ${HOME}/.bashrc
 fi
 
-for dotfile in clang-format gitignore ctags bashrc gitconfig inputrc template.cpp tmux.conf vimrc hgrc; do
+for dotfile in clang-format gitignore ctags bashrc gitconfig inputrc template.cpp tmux.conf vimrc hgrc pylintrc; do
   if [ -r ${HOME}/.${dotfile} ]; then
     echo "${HOME}/.${dotfile} already exists! Skipped it."
   else

@@ -1,5 +1,5 @@
 # DOCKER_BUILDKIT=1 docker build -t hczhu.dev -f docker-images/dev.Dockerfile .
-FROM ubuntu
+FROM ubuntu:latest
 
 RUN (apt update || true ) \
   && (apt upgrade || true)
@@ -12,6 +12,7 @@ RUN apt install -y \
     sudo \
     tmux \
     wget \
+    cron \
     systemd
 
 RUN apt clean && rm -rf /var/lib/apt/lists/*
