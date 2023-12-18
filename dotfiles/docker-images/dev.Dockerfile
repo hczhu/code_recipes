@@ -1,4 +1,4 @@
-# docker build -t hczhu.dev -f docker-images/dev.Dockerfile .
+# DOCKER_BUILDKIT=1 docker build -t hczhu.dev -f docker-images/dev.Dockerfile .
 FROM ubuntu
 
 RUN (apt update || true ) \
@@ -12,9 +12,8 @@ RUN apt install -y \
     iputils-ping \
     curl \
     sudo \
+    tmux \
      || true
-RUN apt install -y \
-  tmux
 RUN apt clean && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m ubuntu
