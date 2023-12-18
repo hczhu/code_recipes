@@ -67,7 +67,7 @@
 
 [credential]
   # helper = store --file /mnt/thumbdrive/.git-credentials
-  helper = cache --timeout 3600
+	helper = "!f() { /home/ubuntu/.vscode-server/bin/af28b32d7e553898b2a91af498b1fb666fdebe0c/node /tmp/vscode-remote-containers-508de23a-de14-45ee-ab0b-9cf5024eb409.js git-credential-helper $*; }; f"
 
 [url "ssh://git@github.com/"]
     insteadOf = https://github.com/

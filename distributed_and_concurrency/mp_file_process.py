@@ -4,7 +4,6 @@ The output is writter to the output file line-by-line in the same order as the i
 Empty strings are skipped.
 """
 
-from sys import exception
 import time
 import io
 import os
