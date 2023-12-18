@@ -647,7 +647,8 @@ startDevContainer() {
   V='hczhu.dev.container.volume'
   name="hczhu.dev.$(date +%Y-%m-%d)"
   docker volume create ${V}
-  docker-bash --name ${name} --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu hczhu.dev
+  # . can't be in the host name.
+  docker-bash --hostname "$(echo ${name} | sed 's/\./_/g')" --name ${name} --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu hczhu.dev
 }
 
 myDevContainer() {

@@ -2,10 +2,8 @@
 FROM ubuntu
 
 RUN (apt update || true ) \
-  && (apt upgrade || true) \
-  && (apt install update-manager-core || true)
-RUN rm -rf /var/lib/apt/lists/*
-RUN apt update || true 
+  && (apt upgrade || true)
+# RUN rm -rf /var/lib/apt/lists/*
 RUN apt install -y \
     git \
     vim \
@@ -13,8 +11,23 @@ RUN apt install -y \
     curl \
     sudo \
     tmux \
-     || true
+    wget \
+    systemd
+
 RUN apt clean && rm -rf /var/lib/apt/lists/*
+
+# Doesn't work with an error, "hostname: you must be root to change the host name"
+# RUN sudo hostname hczhu.dev.container
+
+# Golang
+ARG GO_VERSION=1.21.5
+RUN wget https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -O go.tar.gz \
+    && tar -xzf go.tar.gz -C /usr/local \
+        && rm go.tar.gz
+ENV GOROOT=/usr/local/go
+# ENV GOPATH=/home/ubuntu/
+ENV GODEBUG madvdontneed=1
+RUN /usr/local/go/bin/go install -v golang.org/x/tools/gopls@v0.14.2
 
 RUN useradd -m ubuntu
 RUN echo 'ubuntu:password' | chpasswd
