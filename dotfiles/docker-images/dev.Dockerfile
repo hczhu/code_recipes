@@ -13,6 +13,7 @@ RUN apt install -y \
     tmux \
     wget \
     cron \
+    python3-pip \
     systemd
 
 RUN apt clean && rm -rf /var/lib/apt/lists/*
