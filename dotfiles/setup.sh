@@ -22,13 +22,15 @@ if [[ -w ${HOME}/.bashrc && "$(realpath ${HOME}/.bashrc)" != "${dir_name}/bashrc
   echo ". ${dir_name}/bashrc" >> ${HOME}/.bashrc
 fi
 
-for dotfile in clang-format gitignore ctags bashrc gitconfig inputrc template.cpp tmux.conf vimrc hgrc pylintrc; do
+for dotfile in clang-format gitignore ctags bashrc inputrc template.cpp tmux.conf vimrc hgrc pylintrc; do
   if [ -r ${HOME}/.${dotfile} ]; then
     echo "${HOME}/.${dotfile} already exists! Skipped it."
   else
     ln -f -s ${dir_name}/${dotfile} ${HOME}/.${dotfile}
   fi
 done
+
+cp -f gitconfig ~/.gitconfig
 
 maybeCreateDir ${HOME}/.vim
 
