@@ -67,7 +67,7 @@
 
 [credential]
   # helper = store --file /mnt/thumbdrive/.git-credentials
-	helper = "!f() { /home/ubuntu/.vscode-server/bin/af28b32d7e553898b2a91af498b1fb666fdebe0c/node /tmp/vscode-remote-containers-41b6d42c-624c-43e0-ab45-b2418c162524.js git-credential-helper $*; }; f"
+	helper = "!f() { /home/ubuntu/.vscode-server/bin/74b1f979648cc44d385a2286793c226e611f59e7/node /tmp/vscode-remote-containers-ba2655d37e51cecf8d48ac8c534b87b4934c1652.js $*; }; f"
 
 [url "ssh://git@github.com/"]
     insteadOf = https://github.com/
