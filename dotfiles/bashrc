@@ -847,8 +847,3 @@ alias git-amend="git commit -a --amend --reuse-message=HEAD"
 # Turn off ls output highlights
 unset LS_COLORS
 alias ls='ls --color=never'
-. /Users/hc.zhu/code_recipes/dotfiles/bashrc
-. /Users/hc.zhu/code_recipes/dotfiles/bashrc
-. /Users/hc.zhu/code_recipes/dotfiles/bashrc
-. /Users/hc.zhu/code_recipes/dotfiles/bashrc
-. /Users/hc.zhu/code_recipes/dotfiles/bashrc

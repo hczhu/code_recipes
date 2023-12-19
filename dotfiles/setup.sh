@@ -18,7 +18,7 @@ if [ -r ${HOME}/.dotfiles ]; then
 fi
 ln -s ${dir_name} ${HOME}/.dotfiles
 
-if [[ -w ${HOME}/.bashrc ]]; then
+if [[ -w ${HOME}/.bashrc && "$(realpath ${HOME}/.bashrc)" != "${dir_name}/bashrc" ]]; then
   echo ". ${dir_name}/bashrc" >> ${HOME}/.bashrc
 fi
 
