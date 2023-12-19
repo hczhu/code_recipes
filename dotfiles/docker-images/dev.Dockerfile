@@ -45,6 +45,8 @@ RUN pip3 install torch torchvision torchaudio
 
 RUN pip3 install jupyterlab
 RUN pip3 install transformers
+RUN pip3 install numpy 
+RUN pip3 datasets tiktoken wandb tqdm
 
 RUN cd /home/ubuntu
 RUN git clone https://github.com/hczhu/code_recipes.git
@@ -55,5 +57,6 @@ RUN git clone https://github.com/hczhu/code_recipes.git
 RUN git clone https://github.com/karpathy/minGPT.git
 RUN git clone https://github.com/karpathy/nanoGPT.git
 RUN git clone https://github.com/pytorch-labs/gpt-fast.git
+RUN git clone https://github.com/karpathy/llama2.c.git
 
 SHELL ["/bin/bash", "-c"]
