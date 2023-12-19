@@ -36,7 +36,7 @@ RUN wget https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -O go.tar.g
     && tar -xzf go.tar.gz -C ${GO_INSTALL_DIR} \
         && rm go.tar.gz
 ENV GOROOT=${GO_INSTALL_DIR}/go
-ENV GOPATH=${GO_INSTALL_DIR}/go
+# ENV GOPATH=${GO_INSTALL_DIR}/go
 ENV GODEBUG madvdontneed=1
 RUN ${GO_INSTALL_DIR}/go/bin/go install -v golang.org/x/tools/gopls@v0.14.2 || true
 
