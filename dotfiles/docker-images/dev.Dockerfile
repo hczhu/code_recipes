@@ -44,6 +44,7 @@ RUN ${GO_INSTALL_DIR}/go/bin/go install -v golang.org/x/tools/gopls@v0.14.2 || t
 RUN pip3 install torch torchvision torchaudio
 
 RUN pip3 install jupyterlab
+RUN pip3 install transformers
 
 RUN cd /home/ubuntu
 RUN git clone https://github.com/hczhu/code_recipes.git
