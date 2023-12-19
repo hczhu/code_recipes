@@ -52,7 +52,7 @@ tmux source ${HOME}/.tmux.conf || true
 if [ ! -r ${HOME}/.ssh/config ]; then
   mkdir -p ${HOME}/.ssh || true
   cp ${dir_name}/ssh_config ${HOME}/.ssh/config
-  chown ${USER} ${HOME}/.ssh/config
+  chown ${UID} ${HOME}/.ssh/config
   chmod 600 ${HOME}/.ssh/config
 fi
 

@@ -1,7 +1,8 @@
 # Don't run anything for other logins, like scp
 
-if [ "${SHELL}" != "/bin/bash" ]; then
+if [[ "${SHELL}" != "/bin/bash" && ! -z "${SHELL}" ]]; then
   chsh -s /bin/bash
+  export SHELL='/bin/bash'
 fi
 
 # set -ex
