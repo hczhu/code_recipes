@@ -1,6 +1,6 @@
 #/bin/bash
 
-set -ex
+set -x
 
 maybeCreateDir() {
   dir=$1
@@ -55,3 +55,5 @@ if [ ! -r ${HOME}/.ssh/config ]; then
   chown ${USER} ${HOME}/.ssh/config
   chmod 600 ${HOME}/.ssh/config
 fi
+
+set +x

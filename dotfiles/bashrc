@@ -255,8 +255,10 @@ export HISTSIZE=1000000                   # big big history
 export HISTFILESIZE=10000000              # big big history
 shopt -s histappend                      # append to history, don't overwrite it
 # Save and reload the history after each command finishes
-export nproc=$(lscpu | grep '^CPU(s):' | sed 's/ \+/ /g' | cut -d' ' -f2)
-alias make='make -j $(nproc)'
+if [[ -x lscpu ]]; then
+  export nproc=$(lscpu | grep '^CPU(s):' | sed 's/ \+/ /g' | cut -d' ' -f2)
+  alias make='make -j $(nproc)'
+fi
 
 [[ -s /home/ubuntu/.autojump/etc/profile.d/autojump.sh ]] && source /home/ubuntu/.autojump/etc/profile.d/autojump.sh
 
@@ -648,7 +650,7 @@ startDevContainer() {
   name="hczhu.dev.$(date +%Y-%m-%d)"
   docker volume create ${V}
   # . can't be in the host name.
-  docker-bash --hostname "$(echo ${name} | sed 's/\./_/g')" --name ${name} --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu hczhu.dev
+  docker-bash --hostname "$(echo ${name} | sed 's/\./_/g')" --name ${name} --restart=always $(getDockerMounts) -v ${V}:/home/ubuntu/host_volume hczhu.dev
 }
 
 myDevContainer() {
@@ -845,3 +847,8 @@ alias git-amend="git commit -a --amend --reuse-message=HEAD"
 # Turn off ls output highlights
 unset LS_COLORS
 alias ls='ls --color=never'
+. /Users/hc.zhu/code_recipes/dotfiles/bashrc
+. /Users/hc.zhu/code_recipes/dotfiles/bashrc
+. /Users/hc.zhu/code_recipes/dotfiles/bashrc
+. /Users/hc.zhu/code_recipes/dotfiles/bashrc
+. /Users/hc.zhu/code_recipes/dotfiles/bashrc
