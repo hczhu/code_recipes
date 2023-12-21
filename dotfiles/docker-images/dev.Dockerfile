@@ -46,7 +46,7 @@ RUN pip3 install torch torchvision torchaudio
 RUN pip3 install jupyterlab
 RUN pip3 install transformers
 RUN pip3 install numpy 
-RUN pip3 datasets tiktoken wandb tqdm
+RUN pip3 install datasets tiktoken wandb tqdm
 
 RUN cd /home/ubuntu
 RUN git clone https://github.com/hczhu/code_recipes.git
