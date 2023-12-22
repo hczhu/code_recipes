@@ -256,9 +256,9 @@ export HISTSIZE=1000000                   # big big history
 export HISTFILESIZE=10000000              # big big history
 shopt -s histappend                      # append to history, don't overwrite it
 # Save and reload the history after each command finishes
-if [[ -x lscpu ]]; then
+if which lscpu > /dev/null 2>&1; then
   export nproc=$(lscpu | grep '^CPU(s):' | sed 's/ \+/ /g' | cut -d' ' -f2)
-  alias make='make -j $(nproc)'
+  alias make='make -j $((nproc / 2))'
 fi
 
 [[ -s /home/ubuntu/.autojump/etc/profile.d/autojump.sh ]] && source /home/ubuntu/.autojump/etc/profile.d/autojump.sh
@@ -644,6 +644,15 @@ getDockerMounts() {
   echo "${ret}"
 }
 alias docker-bash="docker run -it --entrypoint /bin/bash"
+dockerSsh() {
+  container=${1}
+  user=${2}
+  if [[ ! -z ${user} ]]; then
+    user="-u ${user}"
+  fi
+  docker exec -it ${user} ${container} /bin/bash
+}
+alias docker-ssh='dockerSsh'
 
 startDevContainer() {
   echo "Starting hczhu.dev container"
