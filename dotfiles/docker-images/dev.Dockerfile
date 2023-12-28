@@ -23,15 +23,15 @@ RUN apt clean && rm -rf /var/lib/apt/lists/*
 # Doesn't work with an error, "hostname: you must be root to change the host name"
 # RUN sudo hostname hczhu.dev.container
 
-RUN useradd -m ubuntu
-RUN echo 'ubuntu:password' | chpasswd
-RUN adduser ubuntu sudo
-USER ubuntu
-WORKDIR /home/ubuntu
+# RUN useradd -m ubuntu
+# RUN echo 'ubuntu:password' | chpasswd
+# RUN adduser ubuntu sudo
+# USER ubuntu
+WORKDIR /root
 
 # Golang
 ARG GO_VERSION=1.21.5
-ARG GO_INSTALL_DIR=/home/ubuntu
+ARG GO_INSTALL_DIR=/root
 RUN wget https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -O go.tar.gz \
     && tar -xzf go.tar.gz -C ${GO_INSTALL_DIR} \
         && rm go.tar.gz
@@ -48,7 +48,7 @@ RUN pip3 install transformers
 RUN pip3 install numpy 
 RUN pip3 install datasets tiktoken wandb tqdm
 
-RUN cd /home/ubuntu
+RUN cd /root
 RUN git clone https://github.com/hczhu/code_recipes.git
 # Too much side effect
 # RUN cd code_recipes/dotfiles && (bash setup.sh || true)
