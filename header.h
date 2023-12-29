@@ -42,4 +42,4 @@ void _displayType(T&& t);
 #define APPEND_AS_STR(a, b) a STR(b)
 
 // E.g., REQUIURE_CPP_STD(202003L);
-#define REQUIURE_CPP_STD(std_long) static_assert(__cplusplus >= std_long, APPEND_AS_STR("Cpp std " #std_long "is required, but The current std is ", __cplusplus))
+#define REQUIURE_CPP_STD(std_long) static_assert(__cplusplus >= std_long, APPEND_AS_STR("Cpp std " #std_long "is required, but the current std is ", __cplusplus))

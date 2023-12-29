@@ -1,7 +1,7 @@
 
 #include "../header.h"
 
-REQUIURE_CPP_STD(202003L);
+REQUIURE_CPP_STD(202100L);
 
 template <typename V>
 class TriangularMatrix {
@@ -38,9 +38,9 @@ class TriangularMatrix {
     return i * (2 * n_ - i) / 2 + (j - i) - (hasDiagonal_ ? 0 : i + 1);
   }
 
-  void checkSubscripts(size_t i, size_t j) const throw(std::out_of_range) {
+  void checkSubscripts(size_t i, size_t j) const {
     if (i >= n_ || j >= n_) {
-      throw std::out_of_range("subscript out of range: ");
+      throw std::out_of_range("Subscripts out of range: " + std::to_string(i) + " or " + std::to_string(j) + " >= " + std::to_string(n_));
     }
     if (i > j) {
       throw std::out_of_range("subscript out of range: " + std::to_string(i) +
@@ -64,17 +64,21 @@ TEST_F(FooTest, SimpleTest) {
   TM tm(7);
   EXPECT_THROW(tm(7, 0), std::out_of_range);
   EXPECT_THROW(tm(3, 2), std::out_of_range);
-  for (size_t i = 0; i < 7; ++i) {
+  for (size_t i = 0; i < 6; ++i) {
     tm[i, i] = i;
     tm[i, i + 1] = i + 1;
   }
+  tm[6, 6] = 6;
   EXPECT_EQ(tm(0, 0), 0);
+  EXPECT_EQ(tm(5, 5), 5);
+  EXPECT_EQ(tm(5, 6), 6);
   EXPECT_EQ(tm(6, 6), 6);
-  EXPECT_EQ(tm(6, 7), 7);
-  tm[6, 7] = 8;
-  tm[6, 6] = -1;
-  EXPECT_EQ(tm(6, 7), 8);
-  EXPECT_EQ(tm(6, 6), -1);
+  tm[5, 5] = 7;
+  tm[5, 6] = -1;
+  tm[6, 6] = -2;
+  EXPECT_EQ(tm(5, 5), 7);
+  EXPECT_EQ(tm(5, 6), -1);
+  EXPECT_EQ(tm(6, 6), -2);
 }
 
 int main(int argc, char* argv[]) {
