@@ -1,14 +1,16 @@
 
 #include "../header.h"
 
+REQUIURE_CPP_STD(202003L);
+
 template <typename V>
 class TriangularMatrix {
  public:
   // Only has [i, j] with i <= j or i < j depending on hasDiagonal.
   TriangularMatrix(size_t n, bool hasDiagonal = true)
-      : n_(n), hasDiagnonal_(hasDiagonal) {
+      : n_(n), hasDiagonal_(hasDiagonal) {
     auto vn = (n * n + n) / 2;
-    if (!hasDiagnonal_) {
+    if (!hasDiagonal_) {
       vn -= n;
     }
     values_.resize(vn);
@@ -25,14 +27,15 @@ class TriangularMatrix {
   }
 
  private:
-  size_t n_;
+  const size_t n_;
+  const bool hasDiagonal_;
   std::vector<int> values_;
 
   inline size_t getSubscript(size_t i, size_t j) const {
     // hasDiagnoal=true: (n - 0) + (n - 1) +  ... + (n - i)
     //                    + (j - i)
     // hasDiagnoal=false: - i - 1
-    return i * (2 * n_ - i) / 2 + (j - i) - (hasDiagnonal_ ? 0 : i + 1);
+    return i * (2 * n_ - i) / 2 + (j - i) - (hasDiagonal_ ? 0 : i + 1);
   }
 
   void checkSubscripts(size_t i, size_t j) const throw(std::out_of_range) {
@@ -43,7 +46,7 @@ class TriangularMatrix {
       throw std::out_of_range("subscript out of range: " + std::to_string(i) +
                               " > " + std::to_string(j));
     }
-    if (!hasDiagnonal_ && i == j) {
+    if (!hasDiagonal_ && i == j) {
       throw std::out_of_range("subscript out of range: " + std::to_string(i) +
                               " == " + std::to_string(j));
     }
@@ -78,5 +81,6 @@ int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+  PEEK(__cplusplus);
   return RUN_ALL_TESTS();
 }
