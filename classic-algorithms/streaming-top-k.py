@@ -41,7 +41,7 @@ def quick_select(arr: List[T], k) -> T:
     return arr[l]
 
 def streaming_top_k(input_yielder: Generator[T, None, None], k) -> List[T]:
-    """Returns the top k (1-based) elements from the input stream.
+    """Returns the largest k (1-based) elements from the input stream.
     It works well for relatively small k and large input stream.
     """
     def append_from_yielder(yielder, arr, n):
