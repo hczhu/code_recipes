@@ -322,7 +322,11 @@ class LruCacheList {
       return nullptr;
     }
     auto& node = itr->second;
-    recencyList_.splice(recencyList_.begin(), recencyList_, node.itr);
+    // Remove "node.itr" from recencyList_ and insert it to the front of
+    // recencyList_.
+    recencyList_.splice(recencyList_.begin() /* where to insert*/,
+                        recencyList_ /* the source list */,
+                        node.itr /*the source node*/);
     printList("get()");
     return &node.v;
   }
