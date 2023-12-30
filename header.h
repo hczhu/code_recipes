@@ -17,11 +17,13 @@
 #include <iterator>
 #include <limits>
 #include <limits.h>
+#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <numeric>
 #include <queue>
+#include <random>
 #include <ranges>
 #include <regex>
 #include <set>

@@ -1,5 +1,6 @@
 # https://docs.python.org/3/library/threading.html
 from concurrent.futures import thread
+from typing import Callable
 import threading
 class Foo:
     def __init__(self):
@@ -7,7 +8,7 @@ class Foo:
         self.b2 = threading.Barrier(2)
 
 
-    def first(self, printFirst: 'Callable[[], None]') -> None:
+    def first(self, printFirst: Callable[[], None]) -> None:
         
         # printFirst() outputs "first". Do not change or remove this line.
         printFirst()
@@ -15,7 +16,7 @@ class Foo:
         self.b1.wait()
 
 
-    def second(self, printSecond: 'Callable[[], None]') -> None:
+    def second(self, printSecond: Callable[[], None]) -> None:
         
         self.b1.wait()
         # printSecond() outputs "second". Do not change or remove this line.
@@ -23,7 +24,7 @@ class Foo:
         self.b2.wait()
 
 
-    def third(self, printThird: 'Callable[[], None]') -> None:
+    def third(self, printThird: Callable[[], None]) -> None:
         
         self.b2.wait()
         # printThird() outputs "third". Do not change or remove this line.

@@ -13,6 +13,8 @@ class MessageQueue {
   void sendTo(size_t destId, M&& msg) {
     std::unique_lock<std::mutex> lk(m_);
     id2q_[destId].push(std::move(msg));
+    // This is to notify all recipients that there is a new message.
+    // There is only one cv for all recipients.
     cv_.notify_all();
   }
 

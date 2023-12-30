@@ -1,4 +1,5 @@
 #include "../header.h"
+#include "message_queue.h"
 
 
 class FooTest : public testing::Test {
