@@ -1,39 +1,8 @@
-#include <cstdio>
-#include <cstdlib>
-#include <algorithm>
-#include <string>
-#include <iostream>
-#include <cmath>
-#include <vector>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <map>
-#include <cstring>
-#include <complex>
-#include <numeric>
-#include <functional>
-#include <cassert>
-#include <limits>
-#include <limits.h>
-#include <cstdarg>
-#include <iterator>
-#include <valarray>
-#include <thread>
-#include <memory>
+#include "../header.h"
+
 using namespace std;
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-#include <gtest/gtest.h>
-
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
-
-template<typename... T>
-class _DisplayType;
-
-template<typename T>
-void _displayType(T&& t);
 
 template<typename Policy>
 void print(Policy& outputStream) {

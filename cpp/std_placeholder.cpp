@@ -35,7 +35,7 @@ TEST(Foo, Bar) {
   
   toMaybePlaceholder("", Pl::_1);
   EXPECT_EQ("haha", output);
-  toMaybePlaceholder("", Pl::_2);
+  // toMaybePlaceholder("", Pl::_2);
   EXPECT_EQ("haha", output);
   static_assert(std::is_placeholder<decltype(std::ignore)>::value == 0,
     "shouldn't be a placeholder.");

@@ -1,31 +1,6 @@
-#include <algorithm>
-#include <cmath>
-#include <complex>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <functional>
-#include <iostream>
-#include <limits.h>
-#include <map>
-#include <numeric>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <stdarg.h>
-#include <string>
-#include <vector>
-//#define NDEBUG
-#include <assert.h>
+#include "../header.h"
+
 using namespace std;
-#define debug(x)                                                               \
-  cerr << #x << "=\"" << x << "\""                                             \
-       << " at line#" << __LINE__ << endl;
-#define Rep(i, n) for (int i = 0; i < (n); ++i)
-#define For(i, a, b) for (typeof(a) i = a; i < (b); ++i)
-#define SZ(vec) ((int)(vec).size())
-#define All(vec) (vec).begin(), (vec).end()
 
 class Arena {
 public:
@@ -35,22 +10,24 @@ class Base {
 public:
   virtual int foo() { return 0; };
   void *operator new(size_t num) {
-    debug(num);
+    PEEK(num);
     return ::new char[num];
   };
-  Base(int x = -1) : x_(x) { debug(x); };
+  Base(int x = -1) : x_(x) { PEEK(x); };
 
-private:
+  virtual ~Base() { PEEK(x_); };
+
+ private:
   int x_;
 };
 
 class Derived : public Base {
 public:
   void *operator new(size_t num, Arena &mem) {
-    debug(num);
+    PEEK(num);
     return mem.get_mem(num);
   }
-  Derived(int x) : Base(x) { debug(x); }
+  Derived(int x) : Base(x) { PEEK(x); }
 };
 class Simple {
   int a;

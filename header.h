@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -9,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -19,10 +22,14 @@
 #include <mutex>
 #include <numeric>
 #include <queue>
+#include <ranges>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <valarray>
 #include <vector>
 

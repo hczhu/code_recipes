@@ -1,37 +1,5 @@
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cassert>
-#include <cmath>
-#include <complex>
-#include <condition_variable>
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <iterator>
-#include <limits.h>
-#include <limits>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <numeric>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <valarray>
-#include <vector>
-
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-#include <gtest/gtest.h>
-#include "dummy-classes.h"
+#include "../header.h"
 
 void bar(std::function<void()>&& fn) {
 

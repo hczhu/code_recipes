@@ -1,5 +1,5 @@
 #include "../header.h"
-
+#include "dummy-classes.h"
 
 TEST(Foo, Bar) {
   Base a;

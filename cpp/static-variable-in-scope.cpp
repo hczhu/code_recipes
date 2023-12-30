@@ -1,5 +1,5 @@
 #include "../header.h"
-
+#include "dummy-classes.h"
 
 class FooTest : public testing::Test {
  protected:

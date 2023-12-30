@@ -1,8 +1,4 @@
-#include <string>
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-#include <gtest/gtest.h>
-#include <fstream>
+#include "../header.h"
 
 template<typename T>
 void _displayType(T&& t);

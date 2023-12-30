@@ -3,21 +3,19 @@
 
 class ClassNameTrait {
   public:
-    ClassNameTrait()
-      : getName_(
-          [this] { return folly::demangle(typeid(*this)).toStdString(); }),
-      name_(typeid(*this).name()) {
-        PEEK(name_);
-     };
+   ClassNameTrait()
+       : getName_([this] { return typeid(*this).name(); }),
+         name_(typeid(*this).name()){
+             // PEEK(name_);
+         };
 
-    std::string getName() const {
-      return getName_();
-    }
-    // virtual is important. If not used, the types are not polymorphic.
-    virtual ~ClassNameTrait() = default;
+   std::string getName() const { return getName_(); }
+   // virtual is important. If not used, the types are not polymorphic.
+   virtual ~ClassNameTrait() = default;
+
   private:
-    std::string name_;
-    std::function<std::string()> getName_;
+   std::function<std::string()> getName_;
+   std::string name_;
 };
 
 class MyClass : public ClassNameTrait {

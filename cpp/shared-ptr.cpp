@@ -18,7 +18,6 @@ void foo(std::shared_ptr<A>) {
 TEST(Foo, Bar) {
   foo(std::make_shared<B>());
   {
-    EXPECT_EQ(1, 1);
     auto p1 = std::make_shared<Foo>();
     EXPECT_EQ(1, p1.use_count());
     auto p2 = p1;
@@ -30,12 +29,11 @@ TEST(Foo, Bar) {
     EXPECT_EQ(3, p3.use_count());
   }
   {
-    EXPECT_EQ(1, 1);
     auto p1 = std::make_shared<std::string>();
     EXPECT_EQ(1, p1.use_count());
     auto p2 = p1;
     EXPECT_EQ(2, p1.use_count());
-    /*
+    /* Lead to a runtime error:
     std::shared_ptr<std::string> p3(p1.get());
     EXPECT_EQ(2, p1.use_count());
     EXPECT_EQ(1, p3.use_count());

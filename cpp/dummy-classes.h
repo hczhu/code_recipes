@@ -1,29 +1,6 @@
-#include <cstdio>
-#include <cstdlib>
-#include <algorithm>
-#include <string>
-#include <iostream>
-#include <cmath>
-#include <array>
-#include <vector>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <map>
-#include <cstring>
-#include <complex>
-#include <numeric>
-#include <functional>
-#include <cassert>
-#include <limits>
-#include <limits.h>
-#include <cstdarg>
-#include <iterator>
-#include <valarray>
-#include <thread>
-#include <memory>
+#pragma once
 
-#include "header.h"
+#include "../header.h"
 
 class Base {
  public:

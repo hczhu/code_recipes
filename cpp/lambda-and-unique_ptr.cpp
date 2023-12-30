@@ -10,9 +10,7 @@ TEST(Foo, Bar) {
   // Doesn't complile, because std::function requires the function object it
   // wraps to be CopyConstructible.
   // std::function<void()> f = [p = std::move(p)]() mutable { EXPECT_EQ(10, *p); };
-  folly::Function<void()> f = [p = std::move(p)]() mutable {
-    EXPECT_EQ(10, *p);
-  };
+  std::function<void()> f = [p = std::move(p)]() mutable { EXPECT_EQ(10, *p); };
   f();
 }
 

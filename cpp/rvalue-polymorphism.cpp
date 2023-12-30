@@ -1,37 +1,4 @@
-
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cassert>
-#include <cmath>
-#include <complex>
-#include <condition_variable>
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <iterator>
-#include <limits.h>
-#include <limits>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <numeric>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <valarray>
-#include <vector>
-
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-// #include <gtest/gmock.h>
-#include <gtest/gtest.h>
+#include "../header.h"
 
 template<typename T>
 class _DisplayType;
@@ -44,15 +11,17 @@ void _displayType(T&& t);
 class Base {
  public:
   virtual ~Base() = default;
-  virtual void foo() const {
+  virtual int foo() const {
     LOG(INFO) << "Base::foo() got called.";
+    return 0;
   }
 };
 
 class Derived : public Base {
  public:
-  void foo() const override {
+  int foo() const override {
     LOG(INFO) << "Derived::foo() got called.";
+    return 1;
   }
 };
 
@@ -62,17 +31,17 @@ Base returnValue() {
 
 const Base& returnRef() {
   static Derived dd;
-  return Derived();
+  return dd;
 }
 
 TEST(RvaluePolymorphism, Basic) {
   {
     const auto& b = returnValue();
-    b.foo();
+    EXPECT_EQ(b.foo(), 0);
   }
   {
     const auto& b = returnRef();
-    b.foo();
+    EXPECT_EQ(b.foo(), 1);
   }
 }
 

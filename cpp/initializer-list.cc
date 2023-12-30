@@ -1,29 +1,6 @@
-#include <cstdio>
-#include <cstdlib>
-#include <algorithm>
-#include <string>
-#include <iostream>
-#include <cmath>
-#include <vector>
-#include <queue>
-#include <set>
-#include <sstream>
-#include <map>
-#include <cstring>
-#include <complex>
-#include <numeric>
-#include <functional>
-//#define NDEBUG
-#include <cassert>
-#include <limits>
-//INT_MAX INT_MIN
-#include <limits.h>
-#include <cstdarg>
-#include <iterator>
-#include <valarray>
-#include <thread>
+#include "../header.h"
+
 using namespace std;
-#define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 
 template<int S, typename T>
 class FixedSizeVectorBase {
@@ -99,8 +76,7 @@ int main() {
   fixChar.Print();
   Simple simple{1, 'a', "adfasfa"};
   simple = Simple({2, 'b', "afasfas"});
-  int ivalue;
-  cin >> ivalue;
+  int ivalue = 10;
   Simple another{ivalue, 'c', "afads"};
   map<string, set<string>> complicated{
     { "aa", { "1", "2"}},

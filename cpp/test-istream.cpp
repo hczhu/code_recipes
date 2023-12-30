@@ -7,6 +7,8 @@ TEST(Foo, Bar) {
     std::istream_iterator<int>()
   };
   PEEK(v.size());
+  PEEK(v[0]++);
+  PEEK(v[0]);
 }
 
 int main(int argc, char* argv[]) {
