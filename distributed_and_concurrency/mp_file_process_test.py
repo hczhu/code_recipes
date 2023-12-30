@@ -1,4 +1,3 @@
-from pydoc import importfile
 import unittest
 import textwrap
 import io

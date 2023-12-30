@@ -4,7 +4,7 @@ from collections import defaultdict
 import time
 from httpx import AsyncClient, HTTPStatusError, TimeoutException
 from queue import SimpleQueue
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from dataclasses import dataclass, field
 from collections.abc import Iterator, AsyncIterator
 from typing import Callable
@@ -16,9 +16,9 @@ import sys
 class CrawResult:
     url: str
     domain: str
-    content: bytes | None = None
+    content: Optional[bytes] = None
     headers: dict[str, str] = field(default_factory=dict)
-    error: str | None = None
+    error: Optional[str] = None
     # How long did it take to crawl this URL?
     walltime_seconds: float = 0
     def __str__(self) -> str:
@@ -44,7 +44,7 @@ class CrawlOptions(NamedTuple):
 class CrawlTask:
     url: str
     # Will be populated by this crawler if not polulated by the caller.
-    domain: str | None = None
+    domain: Optional[str] = None
 
 
 class AsyncCrawler:
@@ -156,7 +156,8 @@ if __name__ == '__main__':
         loop.run_in_executor(None, lambda r: show(r), result)
 
     def gen_urls() -> Iterator[CrawlTask]:
-        for line in sys.stdin:
-            yield CrawlTask(url=line.strip())
+        yield CrawlTask(url="https://www.google.com")
+        yield CrawlTask(url="https://api.tickertick.com/feed")
+        yield CrawlTask(url="https://api.tickertick.com/tickers")
 
     asyncio.run(crawler.crawl_all(gen_urls()))
