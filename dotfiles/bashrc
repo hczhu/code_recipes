@@ -831,7 +831,7 @@ if [ -d "/usr/local/cuda-12" ]; then
                            ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
 
-alias jupyter_notebook='jupyter notebook --ip=0.0.0.0'
+alias jupyter_notebook='jupyter server --ip=0.0.0.0'
 
 installDocker() {
   sudo mkdir -p /etc/apt/keyring || true
