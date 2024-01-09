@@ -1,16 +1,6 @@
 
 #include "../header.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <optional>
-#include <cassert>
-using namespace std;
-
-
 class FloydWarshall {
  public:
   struct Edge {
@@ -19,21 +9,21 @@ class FloydWarshall {
     size_t w;
   };
 
-  FloydWarshall(const size_t n, const vector<Edge>& edges)
+  FloydWarshall(const size_t n, const std::vector<Edge>& edges)
     : n_(n)
-    , shortestD_(n, vector<size_t>(n, numeric_limits<size_t>::max()/3))
-    , nextEdge_(n, vector<int>(n, -1)) {
-    
+    , shortestD_(n, std::vector<size_t>(n, std::numeric_limits<size_t>::max() / 3 /* avoid overflow */))
+    , nextEdge_(n, std::vector<int>(n, -1))
+    , edges_(edges) {
     for (size_t k = 0; k < n; ++k) {
       shortestD_[k][k] = 0;
       nextEdge_[k][k] = 0;
     }
-    for (int ei = 0; auto& e : edges) {
+    for (int ei = -1; auto& e : edges) {
+      ++ei;
       if (shortestD_[e.a][e.b] > e.w) {
         shortestD_[e.a][e.b] = e.w;
         nextEdge_[e.a][e.b] = ei;
       }
-      ++ei;
     }
 
     for (size_t k = 0; k < n; ++k) for (size_t i = 0; i < n; ++i) for (size_t j = 0; j < n; ++j) {
@@ -45,18 +35,20 @@ class FloydWarshall {
     } 
   }
 
-  optional<size_t> distance(int src, int dst) const {
+  std::optional<size_t> distance(int src, int dst) const {
     if (src == dst) {
       return 0;
     }
-    return nextEdge_[src][dst] >= 0 ? shortestD_[src][dst] : optional<size_t>();
+    return nextEdge_[src][dst] >= 0 ? shortestD_[src][dst] : std::optional<size_t>();
   }
-  const vector<vector<size_t>>& allDistances() const {
+  const std::vector<std::vector<size_t>>& allDistances() const {
     return shortestD_;
   }
 
-  // decreasing the weight of an edge is equivilant to adding a new edge with the target weight.
-  void addEdge(const Edge e, int eIdx) {
+  // NB: decreasing the weight of an edge is equivalant to adding a new edge with the target weight.
+  void addEdge(const Edge e) {
+    const int eIdx = edges_.size();
+    edges_.push_back(e);
     if (shortestD_[e.a][e.b] <= e.w) {
       return;
     }
@@ -68,13 +60,15 @@ class FloydWarshall {
       }
     }
   }
-  void addEdgeSrc(const Edge e, int src) {
-      for (int j = 0; j < n_; ++j) {
-          auto w = shortestD_[src][e.a] + e.w + shortestD_[e.b][j];
-          if (w < shortestD_[src][j]) {
-              shortestD_[src][j] = shortestD_[j][src] = w;
-          }
-      }
+  std::vector<int> shortestPath(int src, int dst) const {
+    assert(nextEdge_[src][dst] >= 0);
+    std::vector<int> path;
+    while (src != dst) {
+      auto e = nextEdge_[src][dst];
+      src = edges_[e].b;
+      path.push_back(e);
+    }
+    return path;
   }
 
   void printMatrix() const {
@@ -88,13 +82,12 @@ class FloydWarshall {
 
  private:
   const size_t n_;
-  vector<vector<size_t>> shortestD_;
+  std::vector<std::vector<size_t>> shortestD_;
   // nextEdge[a][b] is the edge index from a on the shortest path from a to b.
   // < 0 means no path at all.
-  vector<vector<int>> nextEdge_;
+  std::vector<std::vector<int>> nextEdge_;
+  std::vector<Edge> edges_;
 };
-
-
 
 class FooTest : public testing::Test {
  protected:
@@ -102,7 +95,33 @@ class FooTest : public testing::Test {
   void TearDown() override {}
 };
 
-TEST_F(FooTest, Bar) {
+TEST_F(FooTest, ManualCases) {
+  const std::vector<FloydWarshall::Edge> edges = {
+    FloydWarshall::Edge{0, 1, 1},
+    FloydWarshall::Edge{1, 2, 2},
+    FloydWarshall::Edge{2, 3, 3},
+    FloydWarshall::Edge{0, 3, 10},
+    FloydWarshall::Edge{3, 0, 1},
+    FloydWarshall::Edge{1, 3, 8},
+  };
+
+  FloydWarshall fw(5, edges);
+  EXPECT_FALSE(fw.distance(0, 4));
+
+  EXPECT_EQ(fw.distance(0, 3), std::optional<size_t>(6));
+  EXPECT_EQ(fw.shortestPath(0, 3), std::vector<int>({0, 1, 2}));
+
+  EXPECT_EQ(fw.distance(3, 2), std::optional<size_t>(4));
+  EXPECT_EQ(fw.shortestPath(3, 2), std::vector<int>({4, 0, 1}));
+
+  fw.addEdge(FloydWarshall::Edge{1, 3, 6});
+  EXPECT_EQ(fw.distance(0, 3), std::optional<size_t>(6));
+  EXPECT_EQ(fw.shortestPath(0, 3), std::vector<int>({0, 1, 2}));
+
+  fw.addEdge(FloydWarshall::Edge{1, 3, 4});
+  EXPECT_EQ(fw.distance(0, 3), std::optional<size_t>(5));
+  EXPECT_EQ(fw.shortestPath(0, 3), std::vector<int>({0, 7}));
+
 }
 
 int main(int argc, char* argv[]) {

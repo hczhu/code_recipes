@@ -8,6 +8,8 @@
 #include <complex>
 #include <condition_variable>
 #include <cstdarg>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -15,13 +17,14 @@
 #include <functional>
 #include <iostream>
 #include <iterator>
-#include <limits>
 #include <limits.h>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <random>
 #include <ranges>
