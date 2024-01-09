@@ -89,13 +89,13 @@ class FloydWarshall {
   std::vector<Edge> edges_;
 };
 
-class FooTest : public testing::Test {
+class FloydWarshallTest : public testing::Test {
  protected:
   void SetUp() override {}
   void TearDown() override {}
 };
 
-TEST_F(FooTest, ManualCases) {
+TEST_F(FloydWarshallTest, ManualCases) {
   const std::vector<FloydWarshall::Edge> edges = {
     FloydWarshall::Edge{0, 1, 1},
     FloydWarshall::Edge{1, 2, 2},
