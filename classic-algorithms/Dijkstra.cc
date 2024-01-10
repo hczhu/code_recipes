@@ -1,14 +1,17 @@
+
 #include "../cpp/header.h"
 
+class Dijkstra {
+ public:
+};
 
-TEST(Foo, Bar) {
-  std::vector<int> v{
-    std::istream_iterator<int>(std::cin),
-    std::istream_iterator<int>()
-  };
-  PEEK(v.size());
-  PEEK(v[0]++);
-  PEEK(v[0]);
+class DijkstraTest : public testing::Test {
+ protected:
+  void SetUp() override {}
+  void TearDown() override {}
+};
+
+TEST_F(DijkstraTest, Bar) {
 }
 
 int main(int argc, char* argv[]) {

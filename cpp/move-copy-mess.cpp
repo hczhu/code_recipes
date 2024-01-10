@@ -1,4 +1,4 @@
-#include "../header.h"
+#include "../cpp/header.h"
 #include "dummy-classes.h"
 
 TEST(Foo, Bar) {

@@ -1,5 +1,5 @@
 // Overload of '*' to form a new operator '**' to implement rising to power.
-#include "../header.h"
+#include "../cpp/header.h"
 using namespace std;
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 #define Rep(i,n) for(int i=0;i<(n);++i)

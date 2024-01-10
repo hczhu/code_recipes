@@ -1,5 +1,6 @@
-#include "../header.h"
+#include "../cpp/header.h"
 
+#include "../data-structures/Graph.h"
 
 class SCC : public testing::Test {
  protected:
