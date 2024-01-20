@@ -865,3 +865,31 @@ gccBuildRun() {
 }
 
 alias g++-build-run='gccBuildRun'
+alias k-pan='k -n pantheon --context'
+
+deployPantheon() {
+  context=${1} && shift
+  servicecfg/servicecfg build_service_defs -s pantheon && bin/kubecfg --context=${context} apply -f monitoring/pantheon/deploy/multitenant/pantheon.jsonnet
+}
+
+alias deploy-pantheon='deployPantheon'
+
+getKubeRead() {
+  env=${1} && shift
+  bin/tshx --env ${env} kube-login --all ${*}
+}
+
+alias get-kube-read-dev='getKubeRead dev'
+alias get-kube-read-prod='getKubeRead prod'
+alias get-kube-read-staging='getKubeRead staging'
+
+export NO_RESOLVER_UPLOAD=1
+export USE_BAZEL_CACHE=false
+
+gitRevertFileToCommit() {
+  file=${1} && shift
+  commit=${1} && shift
+  git checkout ${commit} -- ${file} ${*}
+}
+git-revert-file-to-commit=gitRevertFileToCommit
+
