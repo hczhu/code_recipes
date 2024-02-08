@@ -870,3 +870,4 @@ gitRevertToCommitForFiles() {
   commit=${1} && shift
   git checkout ${commit} -- ${*}
 }
+alias git-revert-file-to-commit='gitRevertFileToCommit'
