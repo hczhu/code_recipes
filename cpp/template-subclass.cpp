@@ -1,4 +1,4 @@
-#include "../header.h"
+#include "../cpp/header.h"
 // using namespace std;
 #define debug(x) cerr<<#x<<"=\""<<x<<"\""<<" at line#"<<__LINE__<<endl;
 

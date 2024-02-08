@@ -1,4 +1,4 @@
-#include "../header.h"
+#include "../cpp/header.h"
 using namespace std;
 
 void throw_foo(int a) { throw a; }
