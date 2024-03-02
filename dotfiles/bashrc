@@ -679,10 +679,27 @@ myDevContainer() {
 
 alias dev-container='myDevContainer'
 
+kExtractConfigmapValue() {
+  cm=${1} && shift
+  data_key=${1} && shift
+  # escape "."
+  escaped_data_key="$(echo "${data_key}" | sed 's#\.#\\.#g')"
+  kubectl get configmap ${cm} -o jsonpath="{.data.${escaped_data_key}}" ${*}
+}
+
 kDecodeSecret() {
   kubectl get secrets -o jsonpath="{.data.server\.pem}" ${*} | base64 --decode | openssl x509 -text -noout
 }
 alias k-decode-secret='kDecodeSecret'
+
+kDecodeConfigmapYamlValue() {
+  cm=${1} && shift
+  data_key=${1} && shift
+  yaml_path=${1} && shift
+  kExtractConfigmapValue "${cm}" "${data_key}" ${*} | yq "${yaml_path}"
+}
+
+alias k-decode-configmap-yaml-value=kDecodeConfigmapYamlValue
 
 kPodBash() {
   context=${1} && shift
