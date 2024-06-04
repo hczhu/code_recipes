@@ -869,6 +869,12 @@ goPprof2Pdf() {
 
 alias k-json="kubectl -o jsonpath='{}'"
 
+kServiceEndpoints() {
+  svc=${1} && shift
+  kubectl get endpoints ${svc} ${*} -o json | jq -s
+}
+alias k-service-endpoints="kServiceEndpoints"
+
 alias git-amend="git commit -a --amend --reuse-message=HEAD"
 
 # Turn off ls output highlights
@@ -887,4 +893,4 @@ gitRevertToCommitForFiles() {
   commit=${1} && shift
   git checkout ${commit} -- ${*}
 }
-alias git-revert-file-to-commit='gitRevertFileToCommit'
+alias git-revert-file-to-commit='gitRevertToCommitForFiles'
