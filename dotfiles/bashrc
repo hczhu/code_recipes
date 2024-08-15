@@ -871,7 +871,7 @@ alias k-json="kubectl -o jsonpath='{}'"
 
 kServiceEndpoints() {
   svc=${1} && shift
-  kubectl get endpoints ${svc} ${*} -o json | jq -s
+  kubectl get endpoints ${svc} ${*} -o json | jq -s | jq ".[].subsets.[].addresses.[].targetRef.name"
 }
 alias k-service-endpoints="kServiceEndpoints"
 
