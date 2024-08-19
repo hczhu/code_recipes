@@ -861,11 +861,30 @@ installDocker() {
 }
 
 goPprof2Pdf() {
-  go_binary=${1}
-  profile_or_url=${2}
-  go tool pprof -pdf ${go_binary} ${profile_or_url}
+  go_binary=${1} && shift
+  if [[ -z "${go_binary}" ]]; then
+    >&2 echo "Need the binary full path as the first argument"
+    return 1
+  fi
+  port=${1} && shift
+  if [[ -z "${port}" ]]; then
+    >&2 echo "Need the local host port as the second argument"
+    return 1
+  fi
+  profile_type=${1} && shift
+  if [[ -z "${profile_type}" ]]; then
+    profile_type="profile" # CPU
+  fi
+  types=("goroutine" "heap" "threadcreate" "block" "mutex" "profile" "trace")
+  url="http://localhost:${port}/debug/pprof/${profile_type}"
+  if [[ "${profile_type}" = "trace" ]]; then
+    url="${url}?seconds=1"
+  fi
+  go tool pprof -pdf ${go_binary} ${url} ${*}
   # go tool pprof -pdf ~/go/bin/rulemanager 'http://localhost:6060/debug/goroutine'
 }
+
+alias go-pprof-pdf=goPprof2Pdf
 
 alias k-json="kubectl -o jsonpath='{}'"
 
