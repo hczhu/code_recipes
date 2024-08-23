@@ -913,3 +913,89 @@ gitRevertToCommitForFiles() {
   git checkout ${commit} -- ${*}
 }
 alias git-revert-file-to-commit='gitRevertToCommitForFiles'
+
+is_in_list_wildcard() {
+  local target="${1:?missing target}"
+  shift
+  local array=("$@")
+  for ele in "${array[@]}" ; do
+    if [[ "${target}" == ${ele} ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+_git_process_conflict_file() {
+  select=${1:-1}
+  exclude=$((3 - select))
+  awk "
+      BEGIN { section = 0 }
+      /^<<<<<<<.*$/ { conflict=1; next }
+      /^=======.*$/ { conflict=2; next }
+      /^>>>>>>>.*$/ { conflict=0; next }
+      conflict != ${exclude} { print }
+  "
+}
+
+git_process_conflict_file() {
+  file="${1:?missing file}"
+  select="${2}"
+  tmpfile=$(mktemp "/tmp/git_one_conflict.XXXX")
+  cat ${file} | _git_process_conflict_file > ${tmpfile} && mv ${tmpfile} ${file}
+  git add ${file}
+}
+
+confirm_prompt() {
+  if [ "${2}" ]; then
+    echo "${1} skipped"
+    return
+  fi
+  echo -e -n "${1}"  # confirm prompt
+  read confirm
+  if [ "${confirm}" != y ] && [ "${confirm}" != Y ]; then
+    echo "Exit without confirm."
+    exit 1
+  fi
+}
+
+git_process_rebase_conflicts() {
+  local USE_HEAD_LIST=(
+    "go.mod"
+    "go.sum"
+    "*\.md"
+  )
+  while [[ -d ".git/rebase-merge" ]] || [[ -d ".git/rebase-apply" ]]; do
+    echo "Rebase current progress: "
+    RMD="$( git rev-parse --git-path rebase-merge/ )"
+    N=$( cat "${RMD}msgnum" )
+    L=$( cat "${RMD}end" )
+    echo "${N} / ${L}"
+
+    conflict_files=$(git diff --name-only --diff-filter=U)
+    non_auto_resolved_files=()
+    if [ -n "${conflict_files}" ]; then
+      echo -e "conflict files:\n${conflict_files}"
+      for file in ${conflict_files}; do
+        if [[ ! -f "${file}" ]] || ! is_in_list_wildcard "${file}" "${USE_HEAD_LIST[@]}"; then
+          echo "skip resolving conflict for ${file}"
+          non_auto_resolved_files+=("${file}")
+          continue
+        fi
+        git_process_conflict_file "${file}"
+      done
+    fi
+    if [ -n "${non_auto_resolved_files}" ]; then
+      confirm_prompt "please continue after you resolved the current conflicts: (y/N)"
+      for file in ${non_auto_resolved_files}; do
+        if grep -qE '<<<<<<<|=======|>>>>>>>' "$file"; then
+          echo "rebase conflict still exist in ${file}, abort and please rerun this script..."
+          return 1
+        fi
+      done
+    fi
+    git add . && GIT_EDITOR=true git rebase --continue || true
+ done
+
+  echo "All conflicts are processed"
+}
