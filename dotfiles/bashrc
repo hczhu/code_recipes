@@ -733,6 +733,18 @@ kGetContainerSpec() {
 alias k-get-colocated-pods=kGetColocatedPods
 alias k-restart='kubectl rollout restart '
 
+kDeletePV() {
+  context=${1:?Need context, namespace, pvc}
+  ns=${2:?Need context, namespace, pvc}
+  pvc=${3:?Need context, namespace, pvc}
+  local k="kubectl --context ${context} -n ${ns}"
+  pv="$(${k} get pvc ${pvc} -o jsonpath='{.spec.volumeName}')"
+  ${k} delete pvc ${pvc} &
+  sleep 5
+  ${k} delete pv ${pv} &
+}
+alias k-delete-pv=kDeletePV
+
 kEtcdGetKeys() {
   set -x
   context=${1} && shift
