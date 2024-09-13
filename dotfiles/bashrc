@@ -1011,3 +1011,17 @@ git_process_rebase_conflicts() {
 
   echo "All conflicts are processed"
 }
+
+kScaleDownByPercent() {
+  context=${1:?Need context, namespace, deployment, percent}
+  ns=${2:?Need context, namespace, deployment, percent}
+  dep=${3:?Need context, namespace, deployment, percent}
+  percent=${4:?Need context, namespace, deployment, percent}
+  local k="kubectl --context ${context} -n ${ns}"
+  replicas="$(${k} get deployment ${dep} -o jsonpath='{.spec.replicas}')"
+  target=$(echo "ceil(${replicas} * (100 - ${percent}) / 100.0, 0)" | bc --mathlib)
+  confirm "Scaling down ${dep} to ${target} replicas from ${replicas}"
+  ${k} scale deployment ${dep} --replicas=${target}
+}
+alias k-scale-down-by-percent=kScaleDownByPercent
+
