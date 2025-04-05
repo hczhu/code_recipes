@@ -5,63 +5,84 @@ using namespace std;
 template <typename T>
 class Link {
  public:
-  Link(T* next = NULL) : next_(next) {}
+  Link(T* next = nullptr) : next_(next) {}
+  T*& next() { return next_; }
 
  protected:
-  Link* next_;
+  T* next_;
 };
 
-class IntrusiveList {
-  public:
-    void AddToFront(Link* node) {
-      node->Next() = head_.Next();
-      head_.Next() = node;
-    }
-    Link* Start() {
-      return head_.Next();
-    }
-  private:
-    Link head_;
+class Node : public Link<Node> {
+ public:
+  Node(int v = 0, Node* next = nullptr) : Link<Node>(next), data_(v) {}
+  int value() const { return data_; }
+
+ private:
+  int data_;
 };
 
-class Node : public Link {
-  public:
-    Node(int v = 0) : data_(v) {}
-  private:
-    int data_;
-};
+Node* fromVector(const vector<int>& vec) {
+  Node head;
+  Node* tail = &head;
 
-template<class T>
-class NonIntrusiveList {
-
-  class InnerNode : public Link {
-    public:
-      InnerNode(const T* user_data) : user_data_(user_data) {}
-      const T* user_data_;
-  };
-  IntrusiveList list_;
-  public:
-    void AddToFront(const T& new_data) {
-      list_.AddToFront(new InnerNode(&new_data));
-    }
-};
-
-#define CHECK_DERIVE(x, y) do { y* _tmp_y = (x*)(0); _tmp_y = NULL;} while(0);
-
-int main() {
-  CHECK_DERIVE(Node, Link);
-  const int n = 100000;
-  double start = 1.0 * clock() / CLOCKS_PER_SEC;
-  IntrusiveList intrusive_list;
-  for (auto i : std::views::iota(0, n)) {
-    intrusive_list.AddToFront(new Node(i));
+  for (int v : vec) {
+    Node* node = new Node(v);
+    tail->next() = node;
+    tail = node;
   }
-  cerr << "Intrusive Time = " << 1.0 *clock() / CLOCKS_PER_SEC - start << " s" << endl;
-  start = 1.0 * clock() / CLOCKS_PER_SEC;
-  NonIntrusiveList<int> nonintrusive_list;
-  for (auto i : std::views::iota(0, n)) {
-    nonintrusive_list.AddToFront(*(new int(i)));
+  return head.next();
+}
+
+vector<int> toVector(Node* head) {
+  vector<int> vec;
+  while (head) {
+    vec.push_back(head->value());
+    head = head->next();
   }
-  cerr << "Non-intrusive Time = " << 1.0 *clock() / CLOCKS_PER_SEC - start << " s" << endl;
-  return 0;
+  return vec;
+}
+
+Node* swapEvery2(Node* head) {
+  if (head == nullptr) {
+    return nullptr;
+  }
+  Node sentinel(0, head);
+  auto p0 = &sentinel;
+  auto p1 = head;
+  auto p2 = head->next();
+  while (p1 && p2) {
+    p1->next() = p2->next();
+    p2->next() = p1;
+    p0->next() = p2;
+
+    p0 = p1; // p1 is the new p2
+    p1 = p0->next();
+    if (p1) {
+      p2 = p1->next();
+    }
+  }
+  return sentinel.next();
+}
+
+TEST(LinkedList, SwapEvery2) {
+  vector<int> all = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  for (size_t l = 0; l < all.size(); ++l) {
+    SCOPED_TRACE("Test case with vector length: " + std::to_string(l));
+    auto vec = vector<int>(all.begin(), all.begin() + l);
+    auto head = fromVector(vec);
+    auto swapped = swapEvery2(head);
+    auto swappedVec = toVector(swapped);
+    auto expected = vector<int>(vec);
+    for (size_t i = 0; i + 1 < expected.size(); i += 2) {
+      swap(expected[i], expected[i + 1]);
+    }
+    EXPECT_EQ(expected, swappedVec) << "l = " << l;
+  }
+}
+
+int main(int argc, char* argv[]) {
+  testing::InitGoogleTest(&argc, argv);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+  return RUN_ALL_TESTS();
 }
