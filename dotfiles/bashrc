@@ -17,6 +17,17 @@ if ! maybeExit 2> /dev/null; then
   return 0
 fi
 
+runFuncInChildBash() {
+  # run a function in a child bash shell.
+  func=${1}
+  shift
+  if [ -z "${func}" ]; then
+    return 1
+  fi
+  # Set -ex in the child shell.
+  bash -c "${func} ${*}"
+}
+
 # personal alias
 alias chinese='LANG=zh.utf8'
 #alias arena='killall scim; /usr/lib/jvm/java-6-openjdk/jre/bin/javaws.real ~/mycode/topcoder/ContestAppletProd.jnlp &'
@@ -774,7 +785,7 @@ alias k-get-warning-events='kubectl get events --field-selector type=Warning --c
 alias k-get-events='kubectl get events '
 alias k-restart-pod='kubectl delete pod'
 alias random-string='echo "${RANDOM}${RANDOM}${RANDOM}${RANDOM}${RANDOM}" | md5sum | cut -f1 -d" "'
-alias bazel-test=' bazel test --test_output=all'
+alias bazel-test=' bazel test --test_output=streamed'
 
 alias nc-gmail-smtp='nc -vz smtp.gmail.com 587 -w 3'
 
@@ -897,6 +908,43 @@ goPprof2Pdf() {
 }
 
 alias go-pprof-pdf=goPprof2Pdf
+
+goProf() {
+  local_port=${1} && shift
+  # check local port is an integer between 1 and 65535
+  if ! [[ "${local_port}" =~ ^[0-9]+$ ]] || [ "${local_port}" -lt 1 ] || [ "${local_port}" -gt 65535 ]; then
+    >&2 echo "Local port must be an integer between 1 and 65535"
+    return 1
+  fi
+  type=${1} && shift
+  # Check type is one of the types
+  types=("goroutine" "goroutine2" "heap" "threadcreate" "block" "mutex" "profile" "trace")
+  if [[ ! " ${types[@]} " =~ " ${type} " ]]; then
+    >&2 echo "Type must be one of the following: ${types[@]}"
+    return 1
+  fi
+  url="http://localhost:${local_port}/debug/pprof/${type}"
+  if [[ "${profile_type}" = "trace" ]]; then
+    url="${url}?seconds=1"
+  fi
+  if [[ "${type}" = "goroutine2" ]]; then
+    url="${url%2}?debug=2"
+  fi
+  # Create a temporary file to store the output with timestamp
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  tmpfile=$(mktemp "/tmp/go_pprof_${type}_${timestamp}.XXXX")
+  if ! curl -s "${url}" --output ${tmpfile}; then
+    >&2 echo "Failed to fetch pprof data from ${url}"
+    return 1
+  fi
+  if [[ "${type}" = "goroutine2" ]]; then
+    echo "Inspect the text file ${tmpfile} for all goroutine stack traces"
+  else
+    go tool pprof -http=:61001 ${tmpfile}
+  fi
+}
+
+alias go-prof='goProf'
 
 alias k-json="kubectl -o jsonpath='{}'"
 
