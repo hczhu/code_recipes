@@ -99,8 +99,6 @@ class AsyncCrawler:
     
     async def crawl_all(self, tasks: Iterator[CrawlTask]) -> AsyncIterator[CrawResult]:
         self.task_iter = tasks
-        self.waiting_tasks = 0
-        self.no_more_tasks = False
         async with AsyncClient() as client:
             async for result in  self.crawl_all_with_client(tasks, client):
                 yield result
@@ -110,14 +108,12 @@ class AsyncCrawler:
             try:
                 return next(self.task_iter)
             except StopIteration:
-                self.no_more_tasks = True
                 return None
             return None
 
         while len(self.pending_tasks) < self.opts.max_pending:
             task = get_nex_task()
             if task is None:
-                self.no_more_tasks = True
                 break
             if task.domain is None:
                 parsed = tldextract.extract(task.url)
@@ -127,15 +123,12 @@ class AsyncCrawler:
                 self.logger.info(f"Delayed crawling {task.url} because we already have {self.pending_tasks_per_domain[task.domain]}"
                                  f" pending tasks for domain {task.domain}")
                 self.domain_queues[task.domain].put(task)
-                self.waiting_tasks += 1
             else:
                 self.pending_tasks.append(asyncio.create_task(self.crawl_one(task, client)))
                 self.pending_tasks_per_domain[task.domain] += 1
 
     async def crawl_all_with_client(self, tasks: Iterator[CrawlTask], client: AsyncClient) -> AsyncIterator[CrawResult]:
         self.task_iter = tasks
-        self.waiting_tasks = 0
-        self.no_more_tasks = False
         self.logger.info(f"Starting crawl with {self.opts.max_pending} max pending tasks")
         while True:
             self.populate_pending_tasks(client)
@@ -154,7 +147,6 @@ class AsyncCrawler:
                      self.logger.info(f"Found a pending task for domain {result.domain}")
                      self.pending_tasks.append(asyncio.create_task(self.crawl_one(self.domain_queues[result.domain].get(), client)))
                      self.pending_tasks_per_domain[result.domain] += 1
-                     self.waiting_tasks -= 1
                 self.opts.post_processor(result)
                 yield result
 
