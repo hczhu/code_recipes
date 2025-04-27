@@ -1,18 +1,6 @@
-import asyncio
 import pytest
 import logging
 import os
-
-def pytest_configure(config):
-    # Explicitly set the asyncio fixture loop scope to "function"
-    config.addinivalue_line("default_asyncio_fixture_loop_scope", "function")
-    config.addinivalue_line("asyncio_mode", "strict")
-
-@pytest.fixture(scope="function")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest.fixture(scope="function")
 def test_logger(request):
