@@ -655,6 +655,7 @@ getDockerMounts() {
   echo "${ret}"
 }
 alias docker-bash="docker run -it --entrypoint /bin/bash"
+alias docker-purge-cache=' docker system prune --all --volumes --force'
 dockerSsh() {
   container=${1}
   user=${2}
