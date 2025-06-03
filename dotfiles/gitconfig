@@ -46,7 +46,7 @@
   untracked = cyan
 
 [diff]
-  tool = vimdiff
+	tool = vimdiff
 [difftool]
 	prompt = false
 [alias]
@@ -69,3 +69,5 @@
   # helper = store --file /mnt/thumbdrive/.git-credentials
 [github]
 	username = hczhu
+[difftool "vimdiff"]
+	cmd = vimdiff -R $LOCAL -c \":se noreadonly\" $REMOTE
