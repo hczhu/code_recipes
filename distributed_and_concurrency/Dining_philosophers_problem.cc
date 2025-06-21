@@ -163,6 +163,10 @@ class PhilosophersSync {
 
   void takeForks(size_t pid, std::function<void(size_t)> &cb,
                  std::function<void(size_t, size_t)> &releaseCb) & {
+    // There are two cases:
+    // 1. Two neighbors are not eating (they may be hungry) and tryToEat() successfully put "pid" in eating and release() sems[pid].
+    // 2. At least one neighbor is eating. "pid" is still in hungry state. "pid" is blocked on acquiring sems[pid] until a neighbor calls tryToEat(pid) on behalf of "pid" and unblock "pid".
+    //    But at that momemt, "pid" is still only in hungry state. Things are the same for "pid" after exit of takeForks().
     {
       std::lock_guard<std::mutex> lg(m_);
       states_[pid] = State::HUNGRY;
@@ -201,6 +205,7 @@ class PhilosophersSync {
   // whole algorithm when both of his neighbors are not eating.
   // He can also release sems_[i - 1] and sems_[i + 1] for his neighbors to eat
   // when he is putting forks.
+  // NB: the semaphore is not actually used to protect the exclusive forks. Instead, it's just to for philosophers to avoid busy waiting.
   std::vector<std::unique_ptr<BinarySemaphore>> sems_;
 
   mutable std::mutex m_;
