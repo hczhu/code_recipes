@@ -70,4 +70,4 @@
 [github]
 	username = hczhu
 [difftool "vimdiff"]
-	cmd = vimdiff -R $LOCAL -c \":se noreadonly\" $REMOTE
+	cmd = vimdiff -R $LOCAL -c ':se noreadonly' $REMOTE
