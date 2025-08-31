@@ -62,7 +62,7 @@ class Query:
         self.t = t
         self.selects = []
         self.wheres = []
-        self.op = LogicOp.AND
+        self.where_op = LogicOp.AND
         self.orders = []
         self.order_desc = False
 
@@ -83,17 +83,23 @@ class Query:
                 cond[2]
             ) for cond in conds
         ]
-        self.op = op
+        self.where_op = op
         return self
 
     def match_row(self, row: list[str|int]) -> bool:
+        if len(self.wheres) == 0:
+            return True
         for c_idx, op, rv in self.wheres:
             # lv can be None
             lv = row[c_idx]
             rv = Value(rv)
-            if not eval(f"lv {op} rv"):
-                return False
-        return True
+            if eval(f"lv {op} rv"):
+                if self.where_op == LogicOp.OR:
+                    return True
+            else:
+                if self.where_op == LogicOp.AND:
+                    return False
+        return self.where_op == LogicOp.AND
     
     def order_by(self, cols: list[str], desc: bool =False) -> "Query":
         self.orders = [
@@ -182,3 +188,9 @@ if __name__ == "__main__":
     assert t.select(["name", "size", "cat", "value"]).where([ ("cat", ">=", "b"), ("value", " != ", None)]).order_by(["name", "cat"], desc=True).commit() == [
         ['yy', None, 'ba', 100]
     ], t.select(["name", "size", "cat", "value"]).where([("cat", ">=", "b"), ("value", " != ", None)]).order_by(["name", "cat"], desc=True).commit()
+
+    assert t.select(["name", "size", "cat", "value"]).where([ ("cat", ">=", "b"), ("value", " != ", None)], op=LogicOp.OR).order_by(["name", "cat"], desc=True).commit() == [
+       ['yy', None, 'ba', 100],
+       ['xx', 100, 'b', None],
+       ['xx', None, 'a', 200],
+    ], t.select(["name", "size", "cat", "value"]).where([("cat", ">=", "b"), ("value", " != ", None)], op=LogicOp.OR).order_by(["name", "cat"], desc=True).commit()
