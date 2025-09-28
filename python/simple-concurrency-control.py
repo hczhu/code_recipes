@@ -2,6 +2,12 @@
 from concurrent.futures import thread
 from typing import Callable
 import threading
+def printFirst():
+    print("first", end=' ')
+def printSecond():
+    print("second", end=' ')
+def printThird():
+    print("third", end=' ')
 class Foo:
     def __init__(self):
         self.b1 = threading.Barrier(2)
@@ -30,3 +36,14 @@ class Foo:
         # printThird() outputs "third". Do not change or remove this line.
         printThird()
 
+if __name__ == "__main__":
+    foo = Foo()
+    t1 = threading.Thread(target=foo.first, args=(printFirst,))
+    t2 = threading.Thread(target=foo.second, args=(printSecond,))
+    t3 = threading.Thread(target=foo.third, args=(printThird,))
+    t3.start()
+    t2.start()
+    t1.start()
+    t1.join()
+    t2.join()
+    t3.join()
