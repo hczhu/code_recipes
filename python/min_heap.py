@@ -1,6 +1,7 @@
 from typing import TypeVar, Protocol, Set, Generic, List, NamedTuple, Dict, Self
 from collections.abc import Hashable
 from collections import defaultdict
+from bisect import bisect_left, bisect_right 
 import heapq
 
 class Comparable(Protocol):
@@ -37,6 +38,37 @@ class MinHeap(Generic[HCT]):
                 self.removed.remove(e)
             else:
                 heapq.heappush(self.h, e)
+
+class TopK(Generic[HCT]):
+    def __init__(self, k: int, l: list[HCT]):
+        self.h = MinHeap[HCT](l)
+        self.k = k
+        self.top_k = self.h.popN(k)
+    
+    def add(self, e: HCT) -> None:
+        pos = bisect_right(self.top_k, e)
+        while pos < len(self.top_k):
+            self.top_k[pos], e = e, self.top_k[pos]
+            pos += 1
+        self.top_k.append(e)
+        if len(self.top_k) > self.k:
+            self.h.push([self.top_k.pop()])
+    
+    def remove(self, e: HCT) -> None:
+        pos = bisect_right(self.top_k, e)
+        if pos == 0 or self.top_k[pos-1] != e:
+            self.h.remove(e)
+            return
+        while pos < len(self.top_k):
+            self.top_k[pos - 1] = self.top_k[pos]
+            pos += 1
+        self.top_k.pop()
+        top_heap = self.h.popN(1)
+        if top_heap:
+            self.add(top_heap[0])
+    
+    def get_top_k(self) -> List[HCT]:
+        return self.top_k
 
 CT = TypeVar("CT", bound=Comparable)
 class HctIndex(Generic[CT]):
@@ -81,17 +113,17 @@ class MovieRentingSystem:
         ]
         self.MoiveIndexType = HctIndex[Movie]
         self.MoiveIndexType.setCTs(self.movies)
-        self.rented_movies = MinHeap[HctIndex[Movie]]([])
-        self.unrented_movies: Dict[int, MinHeap[HctIndex[Movie]]] = {}
+        self.rented_movies = TopK[HctIndex[Movie]](5, [])
+        self.unrented_movies: Dict[int, TopK[HctIndex[Movie]]] = {}
         self.inverted_index = defaultdict(dict)
         for idx, m in enumerate(self.movies):
             mid = m.movie
             self.inverted_index[m.shop][mid] = idx
             wrapperIdx = self.MoiveIndexType(idx)
             if mid in self.unrented_movies:
-                self.unrented_movies[mid].push([wrapperIdx])
+                self.unrented_movies[mid].add(wrapperIdx)
             else:
-                self.unrented_movies[mid] = MinHeap[HctIndex[Movie]]([wrapperIdx])
+                self.unrented_movies[mid] = TopK[HctIndex[Movie]](5, [wrapperIdx])
         
         self.search_cache: Dict[int, List[int]] = {}
         self.report_cache = None
@@ -103,8 +135,7 @@ class MovieRentingSystem:
         if movie not in self.unrented_movies:
             return res 
         h = self.unrented_movies[movie]
-        res = h.popN(5)
-        h.push(res)
+        res = h.get_top_k()
         ans = [self.movies[m.get_idx()].shop for m in res]
         self.search_cache[movie] = ans
         return ans
@@ -112,13 +143,13 @@ class MovieRentingSystem:
     def rent(self, shop: int, movie: int) -> None:
         heap_ele = self.MoiveIndexType(self.inverted_index[shop][movie])
         self.unrented_movies[movie].remove(heap_ele)
-        self.rented_movies.push([heap_ele])
+        self.rented_movies.add(heap_ele)
         self.report_cache = None
         self.search_cache.pop(movie, None)
 
     def drop(self, shop: int, movie: int) -> None:
         heap_ele = self.MoiveIndexType(self.inverted_index[shop][movie])
-        self.unrented_movies[movie].push([heap_ele])
+        self.unrented_movies[movie].add(heap_ele)
         self.rented_movies.remove(heap_ele)
         self.report_cache = None
         self.search_cache.pop(movie, None)
@@ -126,8 +157,7 @@ class MovieRentingSystem:
     def report(self) -> List[List[int]]:
         if self.report_cache is not None:
             return self.report_cache
-        res = self.rented_movies.popN(5)
-        self.rented_movies.push(res)
+        res = self.rented_movies.get_top_k()
         self.report_cache = [
             [self.movies[wi.get_idx()].shop, self.movies[wi.get_idx()].movie]
            for wi in res 
