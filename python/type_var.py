@@ -1,6 +1,6 @@
-
+from typing import Self
 class Type:
-    def __init__(self, v: str|list["Type"]):
+    def __init__(self, v: str|list[Self]):
         self.v = self.l = None
         if isinstance(v, str):
             self.v = v
@@ -15,7 +15,7 @@ class Type:
     def __repr__(self) -> str:
         return str(self)
 
-    def __eq__(self, other: "Type") -> bool:
+    def __eq__(self, other: Self) -> bool:
         # print(other, type(other))
         return self.v == other.v and self.l == other.l
 
