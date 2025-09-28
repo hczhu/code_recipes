@@ -1,5 +1,5 @@
 import heapq
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Tuple, Self
 from dataclasses import dataclass
 from copy import deepcopy
 import bisect
@@ -17,14 +17,14 @@ class Points():
     end: int
     points: int
 
-    def __lt__(self, other: "Points") -> bool:
+    def __lt__(self, other: Self) -> bool:
         return self.end < other.end
 
 @dataclass
 class Use():
     ts: int
     points: int
-    def __lt__(self, other: "Use") -> bool:
+    def __lt__(self, other: Self) -> bool:
         return self.ts < other.ts
 
 class CantMeetUses(Exception):
@@ -35,11 +35,11 @@ class GiftPoints:
         self.points: list[Points] = []
         self.uses: list[Use] = []
     
-    def add(self, points: int, start: int, end: int) -> "GiftPoints":
+    def add(self, points: int, start: int, end: int) -> Self:
         self.points.append(Points(start=start, end=end, points=points))
         return self
     
-    def use(self, ts: int, points: int) -> "GiftPoints":
+    def use(self, ts: int, points: int) -> Self:
         self.uses.append(Use(
             ts = ts,
             points = points,
