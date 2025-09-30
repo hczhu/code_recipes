@@ -1,17 +1,19 @@
 from typing import Self
+
+
 class Type:
-    def __init__(self, v: str|list[Self]):
+    def __init__(self, v: str | list[Self]):
         self.v = self.l = None
         if isinstance(v, str):
             self.v = v
         else:
             self.l = v
-    
+
     def __str__(self) -> str:
         return self.v if self.v is not None else (
-            "(" + ", ".join([ str(l) for l in self.l ]) + ")"
+            "(" + ", ".join([str(l) for l in self.l]) + ")"
         )
-    
+
     def __repr__(self) -> str:
         return str(self)
 
@@ -25,17 +27,19 @@ class Type:
     def is_type_var(self) -> bool:
         return self.v is not None and len(self.v) == 1 and self.v.isupper()
 
+
 class Func:
     def __init__(self, params: list[Type], output: Type):
         self.params = params
         self.output = output
-    
+
     def __str__(self) -> str:
         return f"func{str(Type(self.params))}->{str(self.output)}"
 
 
 class TypeMisMatch(Exception):
     pass
+
 
 def get_return_type(f: Func, args: list[Type]) -> Type:
     q = [(f.params, args)]
@@ -63,10 +67,10 @@ def get_return_type(f: Func, args: list[Type]) -> Type:
                     q += [
                         (x, y) for x, y in zip(params.l, args.l)
                     ]
-    
+
     # print(type_map)
     root = Type([f.output])
-    q =[(f.output, root, 0)]
+    q = [(f.output, root, 0)]
     while len(q) > 0:
         t, parent, idx = q[0]
         q = q[1:]
@@ -82,7 +86,6 @@ def get_return_type(f: Func, args: list[Type]) -> Type:
     return root.l[0]
 
 
-
 if __name__ == "__main__":
     assert Type("int") == Type("int")
     assert Type([Type("int"), Type("str")]) != Type("int")
@@ -96,19 +99,24 @@ if __name__ == "__main__":
     x = Type("x")
 
     assert str(i) == "int"
-    assert str(Type([i, s, i, Type([s, i, T])])) == "(int, str, int, (str, int, T))"
-    assert str(Type([i, s, i, Type([s, i, Type([s, T, i]), T])])) == "(int, str, int, (str, int, (str, T, int), T))"
+    assert str(Type([i, s, i, Type([s, i, T])])
+               ) == "(int, str, int, (str, int, T))"
+    assert str(Type([i, s, i, Type([s, i, Type([s, T, i]), T])])
+               ) == "(int, str, int, (str, int, (str, T, int), T))"
 
     f = Func([i, s, T, Type([s, i, T]), X], T)
     assert str(f) == "func(int, str, T, (str, int, T), X)->T", str(f)
 
-    assert get_return_type(f, [i, s, Type([s, s]), Type([s, i, Type([s, s])]), x]) == Type([s, s])
+    assert get_return_type(f, [i, s, Type([s, s]), Type(
+        [s, i, Type([s, s])]), x]) == Type([s, s])
     try:
-        get_return_type(f, [i, s, Type([s, s]), Type([s, i, Type([s, s, X])]), x])
+        get_return_type(
+            f, [i, s, Type([s, s]), Type([s, i, Type([s, s, X])]), x])
     except TypeMisMatch:
         pass
     else:
         assert False, "Expect a TypeMisMatch exception"
 
     f = Func([i, s, T, Type([s, i, T]), X], Type([T, X, T]))
-    assert get_return_type(f, [i, s, Type([s, s]), Type([s, i, Type([s, s])]), x]) == Type([Type([s, s]), x, Type([s, s])])
+    assert get_return_type(f, [i, s, Type([s, s]), Type(
+        [s, i, Type([s, s])]), x]) == Type([Type([s, s]), x, Type([s, s])])
