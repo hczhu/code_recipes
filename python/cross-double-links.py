@@ -29,6 +29,7 @@ class MinMaxCounters(Generic[T]):
             phead.get_data().l = p.next
         if phead.get_data().l is None and phead != self.max_head and phead != self.min_tail:
             phead.remove()
+        p.get_data().head = p.next = p.prev = None
 
     def add(self, p: Dnode, phead: Dnode) -> None:
         p.get_data().head = phead
@@ -91,6 +92,30 @@ class MinMaxCounters(Generic[T]):
         return dnode.get_data().l.get_data().t, dnode.get_data().cnt
 
 
+class AllOne:
+
+    def __init__(self):
+        self.mmc = MinMaxCounters[str]()
+
+    def inc(self, key: str) -> None:
+        self.mmc.inc(key)
+
+    def dec(self, key: str) -> None:
+        self.mmc.dec(key)
+
+    def getMaxKey(self) -> str:
+        return self.mmc.get_max()[0]
+
+    def getMinKey(self) -> str:
+        return self.mmc.get_min()[0]
+
+        # Your AllOne object will be instantiated and called as such:
+        # obj = AllOne()
+        # obj.inc(key)
+        # obj.dec(key)
+        # param_3 = obj.getMaxKey()
+        # param_4 = obj.getMinKey()
+
 if __name__ == "__main__":
     mmc = MinMaxCounters[str]()
     mmc.inc("a")
@@ -123,3 +148,21 @@ if __name__ == "__main__":
     mmc.dec("b")
     assert mmc.get_max() == (None, 0), mmc.get_max()
     assert mmc.get_min() == (None, 0), mmc.get_min()
+
+    mmc = MinMaxCounters[str]()
+    mmc.inc("hello")
+    mmc.inc("goodbye")
+    mmc.inc("hello")
+    mmc.inc("hello")
+    assert mmc.get_max() == ("hello", 3)
+    mmc.dec("hello")
+    assert mmc.get_max() == ("hello", 2), mmc.get_max()
+
+    mmc.inc("leet")
+    mmc.inc("code")
+    mmc.inc("leet")
+    mmc.dec("hello")
+    mmc.inc("leet")
+    mmc.inc("code")
+    mmc.inc("code")
+    assert mmc.get_max() == ("leet", 3), mmc.get_max()
