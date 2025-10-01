@@ -72,7 +72,9 @@ class MinMaxCounters(Generic[T]):
         if new_cnt == 0:
             del self.index[t]
             return
-        assert phead_next is not None and phead_next is not self.min_tail and phead_next is not self.max_head
+        assert phead_next is not None and phead_next is not self.max_head, (
+            phead_next, self.max_head
+        )
         if phead_next.get_data().cnt != new_cnt:
             phead_next = phead_next.prev.insert(MinMaxCounters.Dnode(
                 self.Data(cnt=new_cnt)
@@ -166,3 +168,15 @@ if __name__ == "__main__":
     mmc.inc("code")
     mmc.inc("code")
     assert mmc.get_max() == ("leet", 3), mmc.get_max()
+
+    mmc = MinMaxCounters[str]()
+    mmc.inc("hello")
+    mmc.inc("hello")
+    assert mmc.get_max() == ("hello", 2)
+    assert mmc.get_min() == ("hello", 2)
+    mmc.dec("hello")
+    mmc.dec("hello")
+    assert mmc.get_max() == (None, 0)
+    mmc.inc("hello")
+    assert mmc.get_max() == ("hello", 1)
+    assert mmc.get_min() == ("hello", 1)
