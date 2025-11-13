@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 struct Data {
   std::string a;

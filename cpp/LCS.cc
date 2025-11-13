@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 /*
  * An implementation of the algorithm in the paper

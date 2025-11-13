@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 // https://en.cppreference.com/w/cpp/thread
 #include <latch>

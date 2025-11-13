@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 using namespace std;
 
@@ -64,7 +64,7 @@ Node* swapEvery2(Node* head) {
   return sentinel.next();
 }
 
-TEST(LinkedList, SwapEvery2) {
+CTEST(LinkedList, SwapEvery2) {
   vector<int> all = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   for (size_t l = 0; l < all.size(); ++l) {
     SCOPED_TRACE("Test case with vector length: " + std::to_string(l));

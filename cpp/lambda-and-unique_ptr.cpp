@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 void foo(std::function<void()>&& f) {
   f();

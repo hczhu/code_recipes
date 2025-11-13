@@ -1,6 +1,4 @@
-#include "../cpp/header.h"
-
-
+#include "header.h"
 
 template<class OutputType>
 std::enable_if_t<std::is_placeholder<OutputType>::value == 0, void>

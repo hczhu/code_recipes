@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 template<typename T>
 class _DisplayType;

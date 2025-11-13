@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 #include "../data-structures/graph.h"
 

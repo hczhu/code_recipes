@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 class Base1 {
  public:

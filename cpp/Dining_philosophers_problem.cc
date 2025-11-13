@@ -1,6 +1,4 @@
-#include "../cpp/header.h"
-
-
+#include "header.h"
 
 // https://www.wikiwand.com/en/Dining_philosophers_problem
 //

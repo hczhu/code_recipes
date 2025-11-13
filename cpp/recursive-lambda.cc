@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(FooTest, Bar) {
   int a = 100;

@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(Foo, Bar) {
   for (double x = 40; x < 100; x += 1) {

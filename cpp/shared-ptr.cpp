@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 struct Foo : public std::enable_shared_from_this<Foo> { };
 

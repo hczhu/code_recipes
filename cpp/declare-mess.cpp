@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(DeclareMess, Mess) {
   float a = 99.9;
