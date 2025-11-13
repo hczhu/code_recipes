@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(Foo, Bar) {
   std::vector<int> v{

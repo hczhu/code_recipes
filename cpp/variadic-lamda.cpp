@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(Foo, Bar) {
   auto all = [&](...) { LOG(INFO) << "Called"; };

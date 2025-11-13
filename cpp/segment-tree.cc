@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 size_t ceilingTwo(size_t n) {
   size_t res = 1;

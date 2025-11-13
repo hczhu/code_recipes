@@ -1,5 +1,5 @@
 
-#include "../cpp/header.h"
+#include "header.h"
 
 class FloydWarshall {
  public:

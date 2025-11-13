@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 template<typename T>
 class is_vector : public std::false_type {};

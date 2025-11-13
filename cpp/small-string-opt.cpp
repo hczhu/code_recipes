@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 // replace operator new and delete to log allocations
 void* operator new(std::size_t n) {

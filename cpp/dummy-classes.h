@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../cpp/header.h"
+#include "header.h"
 
 class Base {
  public:

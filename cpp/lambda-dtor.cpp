@@ -1,5 +1,5 @@
 
-#include "../cpp/header.h"
+#include "header.h"
 
 void bar(std::function<void()>&& fn) {
 

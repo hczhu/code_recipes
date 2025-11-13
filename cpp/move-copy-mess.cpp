@@ -1,5 +1,5 @@
-#include "../cpp/header.h"
 #include "dummy-classes.h"
+#include "header.h"
 
 TEST(Foo, Bar) {
   struct Container {

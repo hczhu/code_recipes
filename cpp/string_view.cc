@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 TEST(StringView, Basic) {
   std::string s = "abcdefg"; 

@@ -1,5 +1,5 @@
 
-#include "../cpp/header.h"
+#include "header.h"
 
 REQUIURE_CPP_STD(202100L);
 

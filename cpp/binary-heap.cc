@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 // The top of the heap is the smallest element.
 // Can't have duplicate keys.

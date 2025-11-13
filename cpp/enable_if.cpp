@@ -1,5 +1,4 @@
-#include "../cpp/header.h"
-
+#include "header.h"
 
 template<typename T>
 struct is_bool_or_int : std::false_type {};

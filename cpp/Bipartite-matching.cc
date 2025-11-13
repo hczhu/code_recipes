@@ -1,4 +1,4 @@
-#include "../cpp/header.h"
+#include "header.h"
 
 using DEL = graph::DirectEdgeList<>;
 
