@@ -8,7 +8,7 @@ installNvidiaDrive() {
 }
 
 # See the latest image: https://docs.nvidia.com/deeplearning/frameworks/pytorch-release-notes/index.html
-pytorch_image_version='23.02-py3'
+pytorch_image_version='25.01-py3'
 alias pytorch-docker="docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -it --rm nvcr.io/nvidia/pytorch:${pytorch_image_version}"
 
 installNvidiaLibContainer() {
