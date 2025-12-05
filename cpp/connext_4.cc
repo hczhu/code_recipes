@@ -83,7 +83,8 @@ std::unordered_map<uint64_t, uint8_t> memo;
 uint8_t treeSearch(uint8_t board[][6 + 2 * P],
                    const uint64_t key,
                    uint8_t color,
-                   int rounds) {
+                   int rounds,
+                   int depth = 0) {
   if (rounds == 42) {
     return EMPTY;
   }
