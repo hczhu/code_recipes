@@ -1075,3 +1075,7 @@ kScaleDownByPercent() {
 }
 alias k-scale-down-by-percent=kScaleDownByPercent
 
+if [ -z "$SSH_AUTH_SOCK" ] || [ ! -e "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)"
+fi
+ssh-add
