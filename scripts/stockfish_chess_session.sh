@@ -1,34 +1,4 @@
- 2>&1 &
-stockfish_pid=$!
-
-# Open FD 3 for writing
-exec 3> "$pipe_file"
-
-# Initialization
-echo "setoption name Threads value ${num_threads}" >&3
-echo "isready" >&3
-
-moves_history=""
-
-# Function to clear the log file or mark position? 
-# We can't easily clear, so we just tail from current position.
-# We will use 'grep -m 1' on a tail stream to catch the next bestmove.
-
-think() {
-    # Construct position command
-    if [[ -z "$moves_history" ]]; then
-        cmd="position fen ${FEN}"
-    else
-        cmd="position fen ${FEN} moves${moves_history}"
-    fi
-    
-    echo "$cmd" >&3
-    echo "go movetime $((max_time_seconds * 1000))" >&3
-    
-    # Wait for bestmove
-    # tail -n 0 -f starts reading from NOW. 
-    # grep -m 1 waits for the first match then exits.
- [200~#!/bin/bash
+#!/bin/bash
 
 # Default max time if not provided
 if [[ ${1} =~ ^[0-9]+$ ]]; then
@@ -67,7 +37,37 @@ echo "  Base FEN: $FEN"
 echo "----------------------------------------"
 
 # Start Stockfish
-./stockfish < "$pipe_file" > "$log_file"   # This causes tail to receive SIGPIPE eventually and die.
+./stockfish < "$pipe_file" > "$log_file" 2>&1 &
+stockfish_pid=$!
+
+# Open FD 3 for writing
+exec 3> "$pipe_file"
+
+# Initialization
+echo "setoption name Threads value ${num_threads}" >&3
+echo "isready" >&3
+
+moves_history=""
+
+# Function to clear the log file or mark position? 
+# We can't easily clear, so we just tail from current position.
+# We will use 'grep -m 1' on a tail stream to catch the next bestmove.
+
+think() {
+    # Construct position command
+    if [[ -z "$moves_history" ]]; then
+        cmd="position fen ${FEN}"
+    else
+        cmd="position fen ${FEN} moves${moves_history}"
+    fi
+    
+    echo "$cmd" >&3
+    echo "go movetime $((max_time_seconds * 1000))" >&3
+    
+    # Wait for bestmove
+    # tail -n 0 -f starts reading from NOW. 
+    # grep -m 1 waits for the first match then exits.
+    # This causes tail to receive SIGPIPE eventually and die.
     result=$(grep -m 1 "^bestmove" <(tail -n 0 -f "$log_file") || true)
     
     echo "Engine: $result"
@@ -89,4 +89,4 @@ while true; do
 done
 
 echo "Exiting."
-exec 3>&-[201~
+exec 3>&-
