@@ -1,0 +1,4 @@
+setworldspawn 304 95 -25
+gamerule spawnRadius 0
+spawnpoint @a 304 95 -25
+gamerule showcoordinates true
