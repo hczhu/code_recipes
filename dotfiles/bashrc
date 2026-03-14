@@ -1079,3 +1079,6 @@ if [ -z "$SSH_AUTH_SOCK" ] || [ ! -e "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)"
 fi
 ssh-add
+
+# AI stuff
+alias claude='COLORTERM=truecolor claude'
