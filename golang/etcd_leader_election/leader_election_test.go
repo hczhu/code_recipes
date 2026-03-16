@@ -38,7 +38,7 @@ func (tc *testCluster) etcdEndpoints() []string {
 func TestUnreachableEtcdServer(t *testing.T) {
 	_, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 3,
+			EtcdSessionTTL: 3 * time.Second,
 			ElectionPrefix: "TestUnreachableEtcdServer",
 			// NB: those are non-existent endpoints, but an ETCD client will still be created successfully while session creation will fail.
 			EtcdEndpoints:   []string{"http://localhost:80", "http://localhost:81"},
@@ -53,7 +53,7 @@ func TestEtcdServerShutdownBeforeLeadership(t *testing.T) {
 	tc := newTestCluster(t)
 	le, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 3,
+			EtcdSessionTTL: 3 * time.Second,
 			ElectionPrefix: "TestEtcdServerShutdownBeforeLeadership",
 			EtcdEndpoints:  tc.etcdEndpoints(), 
 			InstanceId: "leader",
@@ -70,7 +70,7 @@ func TestEtcdServerShutdownAfterLeadership(t *testing.T) {
 	tc := newTestCluster(t)
 	le, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 3,
+			EtcdSessionTTL: 3 * time.Second,
 			ElectionPrefix: "TestEtcdServerShutdownAfterLeadership",
 			EtcdEndpoints:  tc.etcdEndpoints(), 
 			InstanceId: "leader1",
@@ -108,7 +108,7 @@ func TestSingleCampaign(t *testing.T) {
 
 	le, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 3,
+			EtcdSessionTTL: 3 * time.Second,
 			ElectionPrefix: "TestSingleCampaign",
 			EtcdEndpoints:  tc.etcdEndpoints(),
 			InstanceId: "leader1",
@@ -151,7 +151,7 @@ func TestLongLivedLeader(t *testing.T) {
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 2,
+			EtcdSessionTTL: 2 * time.Second,
 			ElectionPrefix: "TestLongLivedLeader",
 			EtcdEndpoints:  tc.etcdEndpoints(),
 			InstanceId: "leader",
@@ -176,7 +176,7 @@ func TestLongLivedLeader(t *testing.T) {
 		defer wg.Done()
 		follower, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 2,
+				EtcdSessionTTL: 2 * time.Second,
 				ElectionPrefix: "TestLongLivedLeader",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "follower",
@@ -214,7 +214,7 @@ func TestMultipleCampaigns(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		le, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 3,
+				EtcdSessionTTL: 3 * time.Second,
 				ElectionPrefix: "TsetMultipleCampaigns",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "instance-" + strconv.Itoa(i),
@@ -251,7 +251,7 @@ func TestYieldingLeadership(t *testing.T) {
 	for i := 0; i < numInstances; i++ {
 		le, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 2,
+				EtcdSessionTTL: 2 * time.Second,
 				ElectionPrefix: "TestYieldingLeadership",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "instance-" + strconv.Itoa(i),
@@ -294,7 +294,7 @@ func TestLeaderDeath(t *testing.T) {
 
 	leader, err := StartLeaderElectionAsync(
 		Config{
-			EtcdSessionTTL: 2,
+			EtcdSessionTTL: 2 * time.Second,
 			ElectionPrefix: "TestLongLivedLeader",
 			EtcdEndpoints:  tc.etcdEndpoints(),
 			InstanceId: "leader",
@@ -316,7 +316,7 @@ func TestLeaderDeath(t *testing.T) {
 	go func() {
 		follower, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 2,
+				EtcdSessionTTL: 2 * time.Second,
 				ElectionPrefix: "TestLongLivedLeader",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: "follower",
@@ -354,15 +354,15 @@ func TestConcurrentCampaigns(t *testing.T) {
 	process := func(instaceId string) {
 		le, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 2,
+				EtcdSessionTTL: 2 * time.Second,
 				ElectionPrefix: "TestConcurrentCampaigns",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: instaceId,
 			},
 			log.Default(),
 		)
-		electionParticipants <- &le
 		require.NoError(t, err)
+		electionParticipants <- &le
 		var wg sync.WaitGroup
 		defer wg.Wait()
 
@@ -416,15 +416,15 @@ func TestBlockingWait(t *testing.T) {
 	process := func(instaceId string) {
 		le, err := StartLeaderElectionAsync(
 			Config{
-				EtcdSessionTTL: 2,
+				EtcdSessionTTL: 2 * time.Second,
 				ElectionPrefix: "TestBlockingWait",
 				EtcdEndpoints:  tc.etcdEndpoints(),
 				InstanceId: instaceId,
 			},
 			log.Default(),
 		)
-		electionParticipants <- &le
 		require.NoError(t, err)
+		electionParticipants <- &le
 		if le.BlockingWaitForLeadership() {
 			leaderCh <- &le
 		}

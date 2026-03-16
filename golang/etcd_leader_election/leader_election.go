@@ -34,7 +34,6 @@ type LeaderElection struct {
 	logPrefix string
 	isClosed *atomic.Bool
 	cancelCh chan struct{}
-	isLeader *atomic.Bool
 
 	// Once a caller is elected as a leader, this channel will be closed.
 	// The leader won't involuntarily lose the leadership as long as its etcd session is valid.
@@ -76,15 +75,11 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 		return 
 	}
 	logger.Println(l.logPrefix, "Canceling the campaign...")
-	// This will resign the leadership if caller is already the leader but
-	// its campaign go routine is still in Campaign().
 	l.cancelCampaign()
-	if l.isLeader.Load() {
-		logger.Println(l.logPrefix, "Resigning the leadership...")
-		ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
-		defer cancel()
-		l.etcdElection.Resign(ctx)
-	}
+	logger.Println(l.logPrefix, "Resigning the leadership...")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	l.etcdElection.Resign(ctx)
 	logger.Println(l.logPrefix, "Closing the etcd session...")
 	l.sessionCancel()
 	l.etcdSession.Close()
@@ -93,14 +88,10 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 }
 
 func createEtcdClient(etcdEndpoints []string) (*clientv3.Client, error) {
-    dialTimeout := time.Duration(10 * time.Second)
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	defer cancel()
 	return clientv3.New(clientv3.Config{
-    		Endpoints:   etcdEndpoints,
-    		DialTimeout: dialTimeout,
-    		Context:	 ctx,
-	})	
+		Endpoints:   etcdEndpoints,
+		DialTimeout: 10 * time.Second,
+	})
 }
 
 func createEtcdSession(client *clientv3.Client, config *Config) (*concurrency.Session, context.CancelFunc, error) {
@@ -165,14 +156,12 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 	becomeLeaderCh := make(chan struct{})
 	errorCh := make(chan error, 1)
 	cancelCh := make(chan struct{})
-	isLeader := atomic.Bool{}
 	go func(campaignErrorCh chan error, becomeLeaderCh chan struct{}) {
 		logger.Printf(logPrefix + "Obtaining leadership with etcd prefix: %s\n", config.ElectionPrefix)
 		// This will block until the caller becomes the leader, an error occurs, or the context is cancelled.
 		err := election.Campaign(campaignCtx, config.InstanceId)
 		if err == nil {
 			logger.Printf(logPrefix + "I am the leader for election prefix: %s\n", config.ElectionPrefix)
-			isLeader.Store(true)
 			// The leader will hold the leadership until it resigns or the session expires. The session will keep alive by the underlying etcd client
 			// automatically sending heartbeats to the etcd server. The session will expire if the etcd server does not receive heartbeats from the client within the session TTL.
 			close(becomeLeaderCh)
@@ -201,7 +190,6 @@ func StartLeaderElectionAsync(config Config, logger *log.Logger) (LeaderElection
 		instanceId: config.InstanceId,
 		logPrefix: logPrefix,
 		isClosed: &atomic.Bool{},
-		isLeader: &isLeader,
 		cancelCh: cancelCh,
 
 		BecomeLeaderCh: becomeLeaderCh,
