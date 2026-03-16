@@ -77,7 +77,7 @@ func (l *LeaderElection) Close(logger *log.Logger) {
 	logger.Println(l.logPrefix, "Canceling the campaign...")
 	l.cancelCampaign()
 	logger.Println(l.logPrefix, "Resigning the leadership...")
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
 	defer cancel()
 	l.etcdElection.Resign(ctx)
 	logger.Println(l.logPrefix, "Closing the etcd session...")
