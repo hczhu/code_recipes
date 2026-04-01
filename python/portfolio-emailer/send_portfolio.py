@@ -28,13 +28,13 @@ _URL_HOST = os.environ.get("PORTFOLIO_HOST", "localhost")
 _URL_PORT = os.environ.get("PORTFOLIO_PORT", "8888")
 DEFAULT_URL = f"http://{_URL_HOST}:{_URL_PORT}/smart-stocker/portfolio.html"
 DEFAULT_TO = "z@hczhu.me"
-DEFAULT_FROM = f"portfolio-emailer@{socket.getfqdn()}"
+DEFAULT_FROM = "portfolio-emailer@mail.hczhu.me"
 
 
 def scrape(url: str) -> str:
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
-    return resp.text
+    return resp.content.decode("utf-8")
 
 
 def send(html: str, to: str, from_addr: str, url: str) -> None:
@@ -44,7 +44,7 @@ def send(html: str, to: str, from_addr: str, url: str) -> None:
     msg["Subject"] = subject
     msg["From"] = from_addr
     msg["To"] = to
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
         refused = smtp.sendmail(from_addr, [to], msg.as_string())
