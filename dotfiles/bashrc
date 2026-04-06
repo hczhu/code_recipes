@@ -1081,4 +1081,5 @@ fi
 ssh-add
 
 # AI stuff
-alias claude='COLORTERM=truecolor claude'
+alias claude='COLORTERM=truecolor claude --remote-control'
+alias claude-danger='COLORTERM=truecolor claude --dangerously-skip-permissions --remote-control'
