@@ -9,7 +9,7 @@ class DoubleLinks(Generic[T]):
         self.next = next
         self.t = t
 
-    def get_data(self) -> T:
+    def get_data(self) -> T | None:
         return self.t
 
     # Return the node preceding it. If it's None, return the next.
@@ -42,7 +42,7 @@ class DoubleLinksIter(Generic[T]):
     def __init__(self, dl: DoubleLinks[T] | None):
         self.dl = dl
 
-    def __next__(self) -> T:
+    def __next__(self) -> T | None:
         if self.dl is None:
             raise StopIteration
         res = self.dl.t
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     assert list(p0) == [0, 2], list(p0)
     p3 = p0.insert(DoubleLinks(3))
     assert list(p0) == [0, 3, 2], list(p0)
+    assert [t for t in p0] == [0, 3, 2], [t for t in p3]
     p0.remove()
     assert list(p3) == [3, 2], list(p3)
     p2.remove()
