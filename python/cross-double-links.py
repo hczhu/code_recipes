@@ -25,9 +25,9 @@ class MinMaxCounters(Generic[T]):
     def remove(self, p: Dnode) -> None:
         p.remove()
         phead = p.get_data().head
-        if phead.get_data().l == p:
+        if phead is not None and phead.get_data().l == p:
             phead.get_data().l = p.next
-        if phead.get_data().l is None and phead != self.max_head and phead != self.min_tail:
+        if phead is not None and phead.get_data().l is None and phead != self.max_head and phead != self.min_tail:
             phead.remove()
         p.get_data().head = p.next = p.prev = None
 
