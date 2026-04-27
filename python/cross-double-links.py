@@ -4,17 +4,46 @@ from doubly_linked_list import DoubleLinks
 T = TypeVar("T")
 
 
+# Data structure overview:
+#
+# Two doubly-linked lists are interleaved ("cross-linked"):
+#
+#   COUNT LIST (horizontal, head-nodes only):
+#     max_head <-> [cnt=5] <-> [cnt=3] <-> [cnt=1] <-> min_tail
+#     Ordered from highest count (near max_head) to lowest (near min_tail).
+#     Each node here is a "head-node" (Data.cnt set, Data.t == None).
+#
+#   ELEMENT LIST (vertical, per head-node):
+#     Each head-node owns a singly-linked chain of element-nodes via Data.l.
+#     Element-nodes store the actual key (Data.t) and point back to their
+#     head-node via Data.head.  They live in the same Dnode pool and are
+#     linked among themselves (prev/next) separate from the count list.
+#
+#   index dict:  key -> Dnode (element-node)  for O(1) lookup.
+#
+# Example after inc("a","a","b"):
+#   max_head <-> [cnt=2, l->b_node] <-> [cnt=1, l->a_node] <-> min_tail
+#   b_node.head = cnt=2 node;  a_node.head = cnt=1 node
+#
+# inc/dec move an element-node to the adjacent count-bucket, creating or
+# removing head-nodes as needed — all O(1).
+
 class MinMaxCounters(Generic[T]):
     class Data:
         def __init__(self, t: T | None = None, head: Self | None = None, cnt: int = 0, l: Self | None = None):
+            # t: key stored in an element-node (None for head-nodes)
             self.t = t
+            # head: pointer from an element-node back to its count head-node
             self.head = head
+            # cnt: count value stored in a head-node
             self.cnt = cnt
+            # l: first element-node in this head-node's element chain
             self.l = l
 
     Dnode = DoubleLinks[Data]
 
     def __init__(self):
+        # Sentinel head-nodes; the count list runs between them.
         self.max_head = MinMaxCounters.Dnode(t=self.Data())
         self.min_tail = MinMaxCounters.Dnode(t=self.Data())
         self.max_head.next = self.min_tail

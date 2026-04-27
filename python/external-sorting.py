@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import string
 import typing
 import logging
 import heapq
@@ -29,18 +28,17 @@ def peek(f: typing.TextIO, n=1):
     return res
 
 def read_next_token(f):
-    is_dilimiter = lambda c: c == "\n" or c == " "
-    is_token_char = lambda c: (not is_dilimiter(c)) and c != ""
-    while is_dilimiter(peek(f)):
+    while peek(f) in ('\n', ' '):
         f.read(1)
     if peek(f) == "":
         return ""
-    res = ""
-    while is_token_char(peek(f)):
-        res += f.read(1)
-    return res
+    chars = []
+    while (c := peek(f)) not in ('\n', ' ', ''):
+        chars.append(f.read(1))
+    return "".join(chars)
 
-def split_into_files(input: typing.TextIO, memory_budget: int) -> (typing.List[str], int):
+
+def split_into_files(input: typing.TextIO, memory_budget: int) -> typing.Tuple[typing.List[str], int]:
     """Splits the input stream into multiple files, each of which is no larger
     than the memory budget.
 
@@ -95,14 +93,18 @@ def merge_files(files: typing.List[str], output: typing.TextIO):
       output (typing.TextIO): the output stream.
     """
     logging.info(f"Merging {len(files)} files")
-    kv_and_file = []
-    for file_name in files:
-        f = open(file_name)
-        kv_and_file.append((read_next_token(f), read_next_token(f), file_name, f))
+    open_files = [open(file_name) for file_name in files]
+    try:
+      kv_and_file = [(read_next_token(f), read_next_token(f), file_name, f)
+                     for file_name, f in zip(files, open_files)]
+    except Exception:
+      for f in open_files:
+          f.close()
+      raise
     heapq.heapify(kv_and_file)
 
     prev_k = None
-    while len(kv_and_file) > 0:
+    while kv_and_file:
         k, v, file_name, f = heapq.heappop(kv_and_file)
         if prev_k == k:
             output.write(f" {v}")
@@ -134,15 +136,14 @@ def sort_kvs(input: typing.TextIO, output: typing.TextIO, memory_budget: int):
         merge_round += 1
         new_files = []
         new_file_idx = 0
-        while len(files) > 1:
+        while len(files) >= file_batch_size:
             new_file = f"/tmp/merge_{merge_round}_{new_file_idx}.txt"
             new_file_idx += 1
             with open(new_file, 'w') as f:
                 merge_files(files[:file_batch_size], f)
-                new_files.append(new_file)
-                files = files[file_batch_size:]
-        if len(files) > 0:
-            new_files.append(files[0])
+            new_files.append(new_file)
+            files = files[file_batch_size:]
+        new_files.extend(files)
         files = new_files
     assert len(files) <= file_batch_size
     merge_files(files, output)
@@ -182,9 +183,12 @@ class TestExternalSort(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), expected_output)
 
 if __name__ == '__main__':
-    unittest.main()
-    try:
-        memory_budget = int(sys.stdin.readline())
-        sort_kvs(sys.stdin, sys.stdout, memory_budget)
-    except Exception as e:
-        logging.error(e)
+    if '--test' in sys.argv:
+        sys.argv.remove('--test')
+        unittest.main()
+    else:
+        try:
+            memory_budget = int(sys.stdin.readline())
+            sort_kvs(sys.stdin, sys.stdout, memory_budget)
+        except Exception as e:
+            logging.error(e)
