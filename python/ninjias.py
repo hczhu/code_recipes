@@ -21,7 +21,8 @@ def ninjas_bruteforce(n: int) -> int|None:
 
 def ninjias(n: int) -> int:
     """ n ninjas are standing in a circle, each holding a sword.
-        #0 kills #1, #2 kills #3, and so on. It keeps going around and around until one ninja is left standing.
+        #0 kills #1, #2 kills #3, and so on.
+        It keeps going around and around until one ninja is left standing.
         Which ninja is it?
     """
     if n <= 2:
