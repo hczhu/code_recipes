@@ -1088,3 +1088,4 @@ alias claude-danger='COLORTERM=truecolor claude --dangerously-skip-permissions -
 export PATH="$PATH:/Users/hc/.lmstudio/bin"
 # End of LM Studio CLI section
 
+alias docker-run-ubuntu='docker run -it --rm ubuntu:latest bash'
