@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
     libgtest-dev \
     libgflags-dev \
     libgoogle-glog-dev \
-    libfolly-dev \
     libarmadillo-dev \
     libopenblas-dev \
     liblapack-dev \

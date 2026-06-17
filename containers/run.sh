@@ -13,7 +13,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
-docker run -it --rm \
+# Allocate a TTY only when stdin is attached to one (avoids "not a TTY" errors in CI/pipes)
+[[ -t 0 ]] && TTY_FLAGS="-it" || TTY_FLAGS="-i"
+
+docker run $TTY_FLAGS --rm \
     -v "$REPO_DIR":/workspace \
     -w /workspace \
     code-recipes-dev \
