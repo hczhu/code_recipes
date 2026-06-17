@@ -50,7 +50,12 @@ RUN pip3 install --no-cache-dir \
     matplotlib \
     pytest \
     pytest-asyncio \
-    pytest-xdist
+    pytest-xdist \
+    playwright
+
+# Install Playwright browser binaries and their system dependencies
+RUN playwright install chromium firefox \
+    && playwright install-deps
 
 # Go
 ARG GO_VERSION=1.21.12
