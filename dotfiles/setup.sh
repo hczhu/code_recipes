@@ -46,7 +46,7 @@ maybeCreateDir ${tmuxPluginDir}
 if [ ! -r ${tmuxPluginDir} ]; then
   mkdir -p ${tmuxPluginDir}
 fi
-if [ ! -r ${tmuxPluginDir} ]; then
+if [ ! -r ${tmuxPluginDir}/tmp ]; then
   git clone https://github.com/tmux-plugins/tpm ${tmuxPluginDir}/tpm
 fi
 tmux source ${HOME}/.tmux.conf || true
