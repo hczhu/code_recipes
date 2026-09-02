@@ -18,8 +18,11 @@ if [ -r ${HOME}/.dotfiles ]; then
 fi
 ln -s ${dir_name} ${HOME}/.dotfiles
 
+sourceLine=". ${dir_name}/bashrc"
 if [[ -w ${HOME}/.bashrc && "$(realpath ${HOME}/.bashrc)" != "${dir_name}/bashrc" ]]; then
-  echo ". ${dir_name}/bashrc" >> ${HOME}/.bashrc
+  if ! grep -qxF "${sourceLine}" ${HOME}/.bashrc; then
+    echo "${sourceLine}" >> ${HOME}/.bashrc
+  fi
 fi
 
 for dotfile in clang-format gitignore ctags bashrc inputrc template.cpp tmux.conf vimrc hgrc pylintrc; do
@@ -30,7 +33,7 @@ for dotfile in clang-format gitignore ctags bashrc inputrc template.cpp tmux.con
   fi
 done
 
-cp -f gitconfig ~/.gitconfig
+cp -f ${dir_name}/gitconfig ${HOME}/.gitconfig
 
 maybeCreateDir ${HOME}/.vim
 
@@ -46,7 +49,7 @@ maybeCreateDir ${tmuxPluginDir}
 if [ ! -r ${tmuxPluginDir} ]; then
   mkdir -p ${tmuxPluginDir}
 fi
-if [ ! -r ${tmuxPluginDir}/tmp ]; then
+if [ ! -r ${tmuxPluginDir}/tpm ]; then
   git clone https://github.com/tmux-plugins/tpm ${tmuxPluginDir}/tpm
 fi
 tmux source ${HOME}/.tmux.conf || true
