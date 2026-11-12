@@ -17,6 +17,23 @@ if ! maybeExit 2> /dev/null; then
   return 0
 fi
 
+# Carried over from Ubuntu's stock ~/.bashrc, now that ~/.bashrc is a symlink
+# to this file. History, PS1, ll and the color aliases are set further down.
+shopt -s checkwinsize  # update LINES/COLUMNS after each command
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+alias la='ls -A'
+alias l='ls -CF'
+# Desktop notification for long-running commands: sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
 runFuncInChildBash() {
   # run a function in a child bash shell.
   func=${1}
@@ -1100,3 +1117,6 @@ export PATH="$PATH:/Users/hc/.lmstudio/bin"
 
 alias docker-run-ubuntu='docker run -it --rm ubuntu:latest bash'
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# ~/.local/bin first (claude, codex, gws); the PATH sort above loses the order.
+export PATH="$HOME/.local/bin:$PATH"
