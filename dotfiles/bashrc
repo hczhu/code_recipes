@@ -1075,10 +1075,19 @@ kScaleDownByPercent() {
 }
 alias k-scale-down-by-percent=kScaleDownByPercent
 
-# if [ -z "$SSH_AUTH_SOCK" ] || [ ! -e "$SSH_AUTH_SOCK" ]; then
-#     eval "$(ssh-agent -s)"
-# fi
-# ssh-add
+# Reuse one ssh-agent across all shells (terminals, tmux, Claude Code) via a
+# fixed socket, instead of a fresh empty agent per shell. Load a key into it
+# once per boot with ssh-add (or let AddKeysToAgent do it on first use).
+# macOS keeps its launchd/Keychain agent.
+if [ "$(uname)" != Darwin ]; then
+    export SSH_AUTH_SOCK="$HOME/.ssh/agent/sock"
+    mkdir -p -m 700 "$HOME/.ssh/agent"
+    ssh-add -l >/dev/null 2>&1
+    if [ $? -eq 2 ]; then   # 2 = no agent reachable at the socket
+        rm -f "$SSH_AUTH_SOCK"
+        eval "$(ssh-agent -a "$SSH_AUTH_SOCK")" >/dev/null
+    fi
+fi
 
 # AI stuff
 alias claude='COLORTERM=truecolor claude --remote-control'
@@ -1090,4 +1099,4 @@ export PATH="$PATH:/Users/hc/.lmstudio/bin"
 # End of LM Studio CLI section
 
 alias docker-run-ubuntu='docker run -it --rm ubuntu:latest bash'
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
